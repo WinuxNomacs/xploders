@@ -8,7 +8,8 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
 - `npm run dev`: serves the repo root; demo at `/demo/` (loads `src/` directly, no build). `PORT` env var changes the
   port (default 8000).
 - `npm run check`: lint, typecheck, unit tests, build, browser tests. Run before every merge.
-- `npm test`: Vitest, Node only (`test/*.test.js`): pure logic, no DOM.
+- `npm test`: Vitest, Node only (`test/*.test.js`): no DOM; `test/helpers.js` has a recording fake canvas and a
+  scheduler the test drives frame by frame.
 - `npm run test:browser`: Playwright against the demo on port 8123 (it starts and stops its own server). Uses
   `dist/`, so build first.
 - `npm run build`: esbuild writes `dist/xploders.mjs` (ESM) and `dist/xploders.min.js` (IIFE, global `Xploders`),
@@ -17,10 +18,15 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
 ## Structure
 
 - `src/index.js`: public API (`Xploders` class, projectile registry). Everything exported here is public.
-- `src/engine.js`: canvas, DPR scaling, fixed-step (1/60 s) loop, live projectiles and particles.
-- `src/projectile.js`: base class for launched objects; `src/projectiles/` holds the built-in ones.
-- `src/particle.js`, `src/sprite.js`, `src/random.js` (seedable RNG: use it, never `Math.random`, so seeded shows and
-  tests repeat).
+- `src/options.js`: defaults (fireworks-js names, shapes, defaults and units) and the deep merge.
+- `src/engine.js`: canvas, DPR scaling, fixed-step (1/60 s) loop, auto-launch, particle cap, drawing.
+- `src/projectile.js`: base class for launched objects (one `update()` per step; move with `moveTo`);
+  `src/projectiles/` holds the built-in ones. `Rocket` reproduces fireworks-js `Trace` motion.
+- `src/particle.js` (fireworks-js `Explosion` motion), `src/bursts.js` (burst styles), `src/sprite.js`.
+- `src/random.js`: seedable RNG. Anything that shapes the show uses the show's `Random`, never `Math.random`, so
+  seeded shows repeat at any frame rate; draw-time randomness (flicker) uses the engine's separate `flickerRandom`.
+- Option units are per 1/60 s step, matching fireworks-js's per-frame units; `test/motion.test.js` holds a port of
+  its formulas as the reference.
 - `demo/`: the dev page; the browser tests drive it through `window.show`.
 
 ## Rules

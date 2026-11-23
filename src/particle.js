@@ -1,50 +1,77 @@
 /**
- * One spark of an explosion. Moves under gravity and friction and fades out.
- * Phase 2 fills in trails and drawing styles.
+ * @typedef {object} ParticleInit
+ * @property {number} x
+ * @property {number} y
+ * @property {number} angle radians
+ * @property {number} speed px/step
+ * @property {number} hue 0-360
+ * @property {number} brightness lightness, percent
+ * @property {number} decay alpha lost per step
+ * @property {number} friction speed multiplier per step
+ * @property {number} gravity downward drift, px/step
+ * @property {number} trail positions kept for the trail line
+ * @property {number} lineWidth
+ * @property {boolean} [flicker] lightness flickers when drawn
+ * @property {number} [crackleAt] alpha at which it pops into sparks (crackle bursts)
+ */
+
+/**
+ * One spark of an explosion, with fireworks-js `Explosion` motion: speed decays
+ * by `friction`, `gravity` is a constant drift, alpha drops by `decay` per step.
+ * Units are per 1/60 s step.
  */
 export class Particle {
-  /**
-   * @param {object} init
-   * @param {number} init.x
-   * @param {number} init.y
-   * @param {number} init.vx velocity in px/s
-   * @param {number} init.vy velocity in px/s
-   * @param {number} init.hue 0-360
-   * @param {number} init.life seconds until fully faded
-   */
-  constructor({ x, y, vx, vy, hue, life }) {
-    this.x = x
-    this.y = y
-    this.vx = vx
-    this.vy = vy
-    this.hue = hue
-    this.life = life
-    this.age = 0
-  }
-
-  /** @returns {boolean} true once fully faded */
-  get dead() {
-    return this.age >= this.life
+  /** @param {ParticleInit} init */
+  constructor(init) {
+    this.x = init.x
+    this.y = init.y
+    this.angle = init.angle
+    this.speed = init.speed
+    this.hue = init.hue
+    this.brightness = init.brightness
+    this.decay = init.decay
+    this.friction = init.friction
+    this.gravity = init.gravity
+    this.lineWidth = init.lineWidth
+    this.flicker = init.flicker ?? false
+    this.crackleAt = init.crackleAt ?? 0
+    this.alpha = 1
+    /** @type {[number, number][]} newest first */
+    this.coordinates = Array.from({ length: Math.max(1, Math.floor(init.trail)) }, () => [init.x, init.y])
+    this.dead = false
   }
 
   /**
-   * @param {number} dt seconds
-   * @param {number} gravity px/s^2
-   * @param {number} friction velocity multiplier per second (0-1)
+   * Advances one step.
+   * @returns {boolean} true when it should pop into sparks now (crackle)
    */
-  update(dt, gravity, friction) {
-    const damp = friction ** dt
-    this.vx *= damp
-    this.vy = this.vy * damp + gravity * dt
-    this.x += this.vx * dt
-    this.y += this.vy * dt
-    this.age += dt
+  update() {
+    this.coordinates.pop()
+    this.coordinates.unshift([this.x, this.y])
+    this.speed *= this.friction
+    this.x += Math.cos(this.angle) * this.speed
+    this.y += Math.sin(this.angle) * this.speed + this.gravity
+    this.alpha -= this.decay
+    if (this.crackleAt > 0 && this.alpha <= this.crackleAt) {
+      this.dead = true
+      return true
+    }
+    if (this.alpha <= this.decay) this.dead = true
+    return false
   }
 
-  /** @param {CanvasRenderingContext2D} ctx */
-  draw(ctx) {
-    const alpha = Math.max(0, 1 - this.age / this.life)
-    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${alpha})`
-    ctx.fillRect(this.x - 1, this.y - 1, 2, 2)
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {() => number} flickerRandom a [0, 1) source not tied to the simulation's seed
+   */
+  draw(ctx, flickerRandom) {
+    const [tx, ty] = this.coordinates[this.coordinates.length - 1]
+    const light = this.flicker ? flickerRandom() * this.brightness : this.brightness
+    ctx.beginPath()
+    ctx.lineWidth = this.lineWidth
+    ctx.moveTo(tx, ty)
+    ctx.lineTo(this.x, this.y)
+    ctx.strokeStyle = `hsla(${this.hue}, 100%, ${light}%, ${this.alpha})`
+    ctx.stroke()
   }
 }

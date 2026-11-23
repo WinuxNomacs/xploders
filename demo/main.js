@@ -1,15 +1,27 @@
 import { Xploders } from '../src/index.js'
 
-const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('sky'))
-const show = new Xploders(canvas).start()
+const sky = /** @type {HTMLElement} */ (document.getElementById('sky'))
+const show = new Xploders(sky).start()
 
-addEventListener('resize', () => show.resize())
+/** @param {string} id */
+const el = (id) => /** @type {HTMLInputElement} */ (document.getElementById(id))
 
-/** @param {string} id @param {() => void} fn */
-const on = (id, fn) => document.getElementById(id)?.addEventListener('click', fn)
-on('fireworks', () => show.launch('rocket', 5))
-on('chicken', () => show.launch('chicken'))
-on('clear', () => show.clear())
+el('auto').addEventListener('click', () => {
+  const on = el('auto').getAttribute('aria-pressed') !== 'true'
+  if (on) show.start()
+  else show.waitStop()
+  el('auto').setAttribute('aria-pressed', String(on))
+  el('auto').textContent = `Auto: ${on ? 'on' : 'off'}`
+})
+el('fireworks').addEventListener('click', () => show.launch(5))
+el('chicken').addEventListener('click', () => show.launch('chicken'))
+el('clear').addEventListener('click', () => show.clear())
+el('burst').addEventListener('change', () => {
+  const v = el('burst').value
+  show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle'] : /** @type {any} */ (v) })
+})
+el('intensity').addEventListener('input', () => show.updateOptions({ intensity: Number(el('intensity').value) }))
+el('debug').addEventListener('change', () => show.updateBoundaries({ debug: el('debug').checked }))
 
 // Exposed for the browser tests and for poking at in the console.
-Object.assign(window, { show })
+Object.assign(window, { show, Xploders })

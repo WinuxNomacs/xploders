@@ -1,21 +1,21 @@
 import { Engine } from './engine.js'
 import { Random } from './random.js'
+import { defaultOptions, deepMerge } from './options.js'
 import { Projectile } from './projectile.js'
+import { Particle } from './particle.js'
 import { Rocket } from './projectiles/rocket.js'
 import { Chicken } from './projectiles/chicken.js'
+import { bursts } from './bursts.js'
 
-export { Projectile, Rocket, Chicken, Random }
+export { Projectile, Particle, Rocket, Chicken, Random, bursts, defaultOptions }
 
 /**
- * @typedef {object} XplodersOptions
- * @property {number} [gravity] px/s^2, default 300
- * @property {number} [friction] velocity kept per second (0-1), default 0.6
- * @property {[number, number]} [hue] hue range, default [0, 360]
- * @property {number} [particles] particles per explosion, default 80
- * @property {number} [seed] seed for a repeatable show
+ * @typedef {import('./options.js').Options} Options
+ * @typedef {import('./options.js').XplodersOptions} XplodersOptions
+ * @typedef {import('./options.js').BurstStyle} BurstStyle
+ * @typedef {import('./engine.js').ProjectileClass} ProjectileClass
+ * @typedef {import('./projectile.js').ProjectileInit} ProjectileInit
  */
-
-/** @typedef {new (init: {x: number, y: number, vx: number, vy: number}) => Projectile} ProjectileClass */
 
 /** @type {Map<string, ProjectileClass>} */
 const registry = new Map([
@@ -23,28 +23,52 @@ const registry = new Map([
   ['chicken', Chicken],
 ])
 
+/** @param {Element} el @returns {el is HTMLCanvasElement} */
+const isCanvas = (el) => typeof (/** @type {any} */ (el).getContext) === 'function'
+
 /**
- * Fireworks and things that explode into fireworks, on a canvas.
+ * Fireworks and things that explode into fireworks, on a transparent canvas.
+ * Options and methods follow fireworks-js, so its configs work here.
  *
  * @example
- * const show = new Xploders(document.querySelector('canvas'))
- * show.start()
- * show.launch('chicken')
+ * const show = new Xploders(document.querySelector('.sky'))
+ * show.start()              // auto-launches at `intensity`
+ * show.launch('chicken')    // and a chicken
  */
 export class Xploders {
   /**
-   * @param {HTMLCanvasElement} canvas
+   * @param {Element} target a canvas, or a container to create a canvas in
    * @param {XplodersOptions} [options]
+   * @param {Partial<import('./engine.js').Scheduler>} [scheduler] for tests: replaces requestAnimationFrame and the clock
    */
-  constructor(canvas, options = {}) {
-    this.options = {
-      gravity: options.gravity ?? 300,
-      friction: options.friction ?? 0.6,
-      hue: options.hue ?? /** @type {[number, number]} */ ([0, 360]),
-      particles: options.particles ?? 80,
+  constructor(target, options = {}, scheduler) {
+    /** @type {Options} */
+    this.options = deepMerge(defaultOptions(), options)
+    /** @type {Element} the element whose size the canvas follows */
+    this.container = target
+    /** @type {boolean} whether we created the canvas (and remove it on dispose) */
+    this.ownsCanvas = !isCanvas(target)
+    if (isCanvas(target)) {
+      this.canvas = target
+    } else {
+      this.canvas = document.createElement('canvas')
+      Object.assign(this.canvas.style, { display: 'block', width: '100%', height: '100%' })
+      target.append(this.canvas)
     }
-    this.random = new Random(options.seed)
-    this.engine = new Engine(canvas, this.options, this.random)
+    this.random = new Random(this.options.seed)
+    this.engine = new Engine(this.canvas, this.options, this.random, scheduler)
+    this.engine.defaultProjectile = registry.get('rocket')
+    /** @type {(() => void)[]} pending waitStop() promises */
+    this.waiters = []
+    this.updateSize()
+    /** @type {ResizeObserver | null} */
+    this.resizeObserver = null
+    if (typeof ResizeObserver === 'function') {
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.options.autoresize) this.updateSize()
+      })
+      this.resizeObserver.observe(this.container)
+    }
   }
 
   /**
@@ -56,47 +80,106 @@ export class Xploders {
     registry.set(name, cls)
   }
 
+  get isRunning() {
+    return this.engine.running
+  }
+
+  /** The live options object. */
+  get currentOptions() {
+    return this.options
+  }
+
+  /** Runs the show, auto-launching at `intensity`. */
   start() {
-    this.engine.start()
+    this.engine.onEmpty = null
+    this.engine.autoLaunch = true
+    this.engine.startLoop()
     return this
   }
 
-  stop() {
-    this.engine.stop()
+  /**
+   * Stops and clears the show.
+   * @param {boolean} [dispose] also stop following the size and remove a canvas this show created
+   */
+  stop(dispose = false) {
+    this.engine.stopLoop()
+    this.engine.autoLaunch = false
+    this.engine.onEmpty = null
+    this.engine.clear()
+    if (dispose) {
+      this.resizeObserver?.disconnect()
+      this.resizeObserver = null
+      if (this.ownsCanvas) this.canvas.remove()
+    }
+    for (const resolve of this.waiters.splice(0)) resolve()
     return this
   }
 
+  /** Freezes or resumes the show, keeping everything in the sky. */
+  pause() {
+    if (this.engine.running) this.engine.stopLoop()
+    else this.engine.startLoop()
+    return this
+  }
+
+  /** Removes everything in the sky; the show keeps running. */
   clear() {
     this.engine.clear()
     return this
   }
 
-  /** Call after the canvas changes size. */
-  resize() {
-    this.engine.resize()
+  /**
+   * Launches rockets (`launch(5)`) or any registered type (`launch('chicken', 2)`).
+   * On a stopped show the loop runs until the sky is empty, without auto-launch.
+   * @param {string | number} [typeOrCount]
+   * @param {number} [count]
+   */
+  launch(typeOrCount = 1, count = 1) {
+    const type = typeof typeOrCount === 'string' ? typeOrCount : 'rocket'
+    const n = typeof typeOrCount === 'number' ? typeOrCount : count
+    const Cls = registry.get(type)
+    if (!Cls) throw new Error(`xploders: unknown projectile type "${type}"`)
+    if (!this.engine.running) {
+      this.engine.autoLaunch = false
+      this.engine.onEmpty = () => this.stop()
+      this.engine.startLoop()
+    }
+    this.engine.launch(n, Cls)
     return this
   }
 
   /**
-   * Launch `count` projectiles of a registered type from the bottom edge.
-   * @param {string} [type]
-   * @param {number} [count]
+   * Stops auto-launching and resolves once everything in the sky has burnt out.
+   * @param {boolean} [dispose] as for `stop`
+   * @returns {Promise<void>}
    */
-  launch(type = 'rocket', count = 1) {
-    const Cls = registry.get(type)
-    if (!Cls) throw new Error(`xploders: unknown projectile type "${type}"`)
-    const { width, height } = this.engine
-    const r = this.random
-    for (let i = 0; i < count; i++) {
-      this.engine.add(
-        new Cls({
-          x: r.range(width * 0.2, width * 0.8),
-          y: height,
-          vx: r.range(-60, 60),
-          vy: -Math.sqrt(2 * this.options.gravity * r.range(height * 0.4, height * 0.8)),
-        }),
-      )
-    }
+  waitStop(dispose = false) {
+    this.engine.autoLaunch = false
+    return new Promise((resolve) => {
+      this.waiters.push(resolve)
+      if (!this.engine.running || this.engine.empty) this.stop(dispose)
+      else this.engine.onEmpty = () => this.stop(dispose)
+    })
+  }
+
+  /** @param {XplodersOptions} options merged into the live options */
+  updateOptions(options) {
+    deepMerge(this.options, options)
+    return this
+  }
+
+  /**
+   * Resizes the canvas, by default to the container's size.
+   * @param {{width?: number, height?: number}} [size] CSS pixels
+   */
+  updateSize({ width = this.container.clientWidth, height = this.container.clientHeight } = {}) {
+    this.engine.resize(width, height)
+    return this
+  }
+
+  /** @param {Partial<import('./options.js').Boundaries>} boundaries */
+  updateBoundaries(boundaries) {
+    deepMerge(this.options.boundaries, boundaries)
     return this
   }
 }
