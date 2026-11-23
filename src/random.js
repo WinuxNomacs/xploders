@@ -33,4 +33,23 @@ export class Random {
   int(min, max) {
     return Math.floor(this.range(min, max + 1))
   }
+
+  /**
+   * @template T
+   * @param {readonly T[]} items non-empty
+   * @returns {T}
+   */
+  pick(items) {
+    return items[Math.floor(this.next() * items.length)]
+  }
+}
+
+/**
+ * A random value in a fireworks-js `{min, max}` range.
+ * @param {Random} random
+ * @param {{min: number, max: number}} range
+ * @param {boolean} [integer]
+ */
+export function inRange(random, { min, max }, integer = false) {
+  return integer ? random.int(min, max) : random.range(min, max)
 }

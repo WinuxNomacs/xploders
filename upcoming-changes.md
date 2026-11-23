@@ -2,19 +2,32 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Fireworks engine
-- **Then:** 2. Projectile API and the pixel chicken
-- **Later:** 3. Extras (sound, pointer launch, reduced motion, demo site)
+- **Up next:** 1. Projectile API and the pixel chicken
+- **Then:** 2. Extras (sound, pointer launch, reduced motion, demo site)
 
 ## Done
+
+- **Fireworks engine** (2026-11-23, branch `phase-1/fireworks-engine`): fireworks-js-compatible options and methods
+  (`src/options.js`, `src/index.js`), its rocket and particle motion (`src/projectiles/rocket.js`,
+  `src/particle.js`), burst styles peony/ring/willow/crackle (`src/bursts.js`), fixed-step engine with auto-launch,
+  `maxParticles`, per-step trail fade and error isolation (`src/engine.js`). Tests: `test/options.test.js`,
+  `test/motion.test.js` (against a port of the fireworks-js formulas), `test/engine.test.js`,
+  `test/browser/demo.spec.js`. Plan and decisions kept below under "Fireworks engine (done)".
+  - `maxParticles` default 4000: measured 2026-11-23 in headless Chromium (software rendering, so likely
+    pessimistic), step + draw per frame: 1000 particles 3.6 ms, 2000 6.9 ms, 4000 12.9 ms, 8000 33.4 ms,
+    16000 66.3 ms. 4000 fits a 60 Hz frame there; the default show stays far below the cap.
+  - Differences from fireworks-js, on purpose: auto-launch rolls its `delay` threshold once per launch (fireworks-js
+    re-rolls every frame, which favours the low end); `launch()` on a running auto show only adds rockets
+    (fireworks-js switches the show to stop once the sky is empty); rocket line width is picked per rocket, not per
+    frame; the canvas size is CSS pixels with a devicePixelRatio backing store.
 
 - **Setup** (2026-11-23, branch `setup/scaffold`): package, esbuild build (ESM + IIFE + `.d.ts`), dev server, demo
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
 
-## 1. Fireworks engine
+## Fireworks engine (done)
 
-Planned 2026-11-23. Branch `phase-1/fireworks-engine`.
+Planned and built 2026-11-23. Branch `phase-1/fireworks-engine`.
 
 A fireworks show that works as a drop-in for fireworks-js: the same options, defaults and look, plus four burst
 styles. Semantics below are taken from fireworks-js v2.10.8 source (`options.ts`, `trace.ts`, `explosion.ts`,
@@ -66,16 +79,16 @@ styles. Semantics below are taken from fireworks-js v2.10.8 source (`options.ts`
 | `boundaries`     | x 50, y 50, debug false     | Rocket targets: x in [x, width - 2x], y in [y, height / 2]; debug draws the box |
 | `autoresize`     | true                        | Follow the container's size (ResizeObserver)                       |
 | `burst` (ours)   | 'peony'                     | Style name, or an array to pick from at random per firework        |
-| `maxParticles` (ours) | to measure             | Cap on live particles; new explosions shrink to fit                |
+| `maxParticles` (ours) | 4000 (measured, above) | Cap on live particles; new explosions shrink to fit                |
 | `seed` (ours)    | random                      | Repeatable show                                                    |
 
-`mouse` and `sound` options belong to phase 3.
+`mouse` and `sound` options belong to the Extras phase.
 
 ### Behaviour
 
 - **Rocket** (fireworks-js `Trace`): straight line from the launch point to a random target in the boundaries,
   speed `*= acceleration` each step; explodes on reaching the target. Overrides the base class's ballistic
-  `update`, which stays for phase 2 projectiles.
+  `update`, which stays for the chicken and custom projectiles.
 - **Particle** (fireworks-js `Explosion`): random angle, speed 1-10, `speed *= friction`, `y += gravity`,
   `alpha -= decay`, drawn as a line through its last `explosion` positions.
 - **Bursts**: peony = the fireworks-js particle above. Ring = evenly spaced angles, one speed, so it stays a circle.
@@ -103,7 +116,7 @@ styles. Semantics below are taken from fireworks-js v2.10.8 source (`options.ts`
 - Demo gets controls: burst style, intensity, auto on/off.
 - Measure: frame time with the cap at a few values to choose the `maxParticles` default.
 
-## 2. Projectile API and the pixel chicken
+## 1. Projectile API and the pixel chicken
 
 - Generic `Projectile`: custom draw/update, arc physics, rotation/spin, explode on apex, timer or target point; a
   projectile chooses its own burst (the chicken: feathers plus fireworks).
@@ -111,9 +124,9 @@ styles. Semantics below are taken from fireworks-js v2.10.8 source (`options.ts`
 - Original 16-bit-style pixel chicken (white hen, red comb, flap/flail frames), drawn by us and stored in the repo.
   Not the SNES Zelda chicken sprite: that is Nintendo's art.
 - `xploders.launch('chicken', opts)`, `Xploders.register(name, cls)` (exists in skeleton form).
-- Open: how the chicken flies (flapping arc vs. thrown and tumbling), whether it squawks (ties into sound, phase 3).
+- Open: how the chicken flies (flapping arc vs. thrown and tumbling), whether it squawks (ties into sound, phase 2).
 
-## 3. Extras
+## 2. Extras
 
 - Sounds: opt-in, lazy-loaded, user-supplied files allowed.
 - Pointer/touch launch at a point.
