@@ -1,15 +1,28 @@
 import { bursts, crackleSparks } from './bursts.js'
+import { Particle } from './particle.js'
 import { Random, inRange } from './random.js'
+import { createCanvas } from './sprite.js'
 
 /** One physics step, ms. Option units are per step, as fireworks-js's are per 60 fps frame. */
 export const STEP_MS = 1000 / 60
 const MAX_FRAME_MS = 250 // a longer gap (tab in background) is clamped, not replayed
 
 /**
- * @typedef {object} Scheduler
+ * What the engine needs from the browser; tests pass stand-ins.
+ * @typedef {object} Env
  * @property {(cb: (now: number) => void) => number} raf
  * @property {(id: number) => void} caf
  * @property {() => number} now ms
+ * @property {(width: number, height: number) => HTMLCanvasElement | OffscreenCanvas} createCanvas for the trail layer
+ */
+
+/**
+ * Anything in the particle list: sparks, feathers.
+ * @typedef {object} ParticleLike
+ * @property {boolean} dead
+ * @property {'trail' | 'sprite'} [layer]
+ * @property {() => boolean} update one step; true when it pops (crackle)
+ * @property {(ctx: CanvasRenderingContext2D, flickerRandom: () => number) => void} draw
  */
 
 /** @typedef {new (init: import('./projectile.js').ProjectileInit) => import('./projectile.js').Projectile} ProjectileClass */
@@ -18,15 +31,20 @@ const MAX_FRAME_MS = 250 // a longer gap (tab in background) is clamped, not rep
  * Owns the canvas, the animation loop and every live object. Draws in CSS pixels;
  * the backing store is scaled by devicePixelRatio. Simulation runs in fixed steps,
  * so the show looks the same at any refresh rate.
+ *
+ * Two layers: fireworks draw on an offscreen trail layer whose previous frame
+ * fades a little each step (that makes the trails); each frame the visible
+ * canvas is cleared, the trail layer copied in, and sprites (chickens,
+ * feathers) drawn crisp on top, so they leave no smeared ghost.
  */
 export class Engine {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {import('./options.js').Options} options live options object (updated in place)
    * @param {Random} random seeded generator for everything that shapes the show
-   * @param {Partial<Scheduler>} [scheduler] injectable for tests
+   * @param {Partial<Env>} [env] injectable for tests
    */
-  constructor(canvas, options, random, scheduler = {}) {
+  constructor(canvas, options, random, env = {}) {
     this.canvas = canvas
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('xploders: canvas 2D context unavailable')
@@ -36,12 +54,17 @@ export class Engine {
     // Flicker is drawn per frame, so it must not consume the seeded generator.
     const flicker = new Random()
     this.flickerRandom = () => flicker.next()
-    this.raf = scheduler.raf ?? ((cb) => requestAnimationFrame(cb))
-    this.caf = scheduler.caf ?? ((id) => cancelAnimationFrame(id))
-    this.now = scheduler.now ?? (() => performance.now())
+    this.raf = env.raf ?? ((cb) => requestAnimationFrame(cb))
+    this.caf = env.caf ?? ((id) => cancelAnimationFrame(id))
+    this.now = env.now ?? (() => performance.now())
+    this.trail = (env.createCanvas ?? createCanvas)(1, 1)
+    const trailCtx = this.trail.getContext('2d')
+    if (!trailCtx) throw new Error('xploders: canvas 2D context unavailable')
+    /** @type {CanvasRenderingContext2D} */
+    this.trailCtx = /** @type {any} */ (trailCtx)
     /** @type {import('./projectile.js').Projectile[]} */
     this.projectiles = []
-    /** @type {import('./particle.js').Particle[]} */
+    /** @type {ParticleLike[]} */
     this.particles = []
     this.width = 0
     this.height = 0
@@ -69,9 +92,14 @@ export class Engine {
     const dpr = globalThis.devicePixelRatio || 1
     this.width = Math.max(0, width)
     this.height = Math.max(0, height)
-    this.canvas.width = Math.round(this.width * dpr)
-    this.canvas.height = Math.round(this.height * dpr)
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    for (const [c, ctx] of /** @type {const} */ ([
+      [this.canvas, this.ctx],
+      [this.trail, this.trailCtx],
+    ])) {
+      c.width = Math.round(this.width * dpr)
+      c.height = Math.round(this.height * dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
     this.options.boundaries.width = this.width
     this.options.boundaries.height = this.height
   }
@@ -98,6 +126,7 @@ export class Engine {
     this.projectiles.length = 0
     this.particles.length = 0
     this.ctx.clearRect(0, 0, this.width, this.height)
+    this.trailCtx.clearRect(0, 0, this.width, this.height)
   }
 
   /** @param {number} now */
@@ -152,7 +181,7 @@ export class Engine {
     this.particles = []
     let live = particles.length
     for (const p of particles) {
-      if (p.update()) {
+      if (p.update() && p instanceof Particle) {
         const sparks = crackleSparks(p, this.random, Math.floor(this.options.maxParticles) - live + 1)
         this.particles.push(...sparks)
         live += sparks.length
@@ -172,8 +201,9 @@ export class Engine {
    * targets inside the boundaries, as fireworks-js does.
    * @param {number} count
    * @param {ProjectileClass} [Cls] defaults to the class registered as 'rocket'
+   * @param {Record<string, any>} [extra] merged into each projectile's init (e.g. chicken options)
    */
-  launch(count, Cls = this.defaultProjectile) {
+  launch(count, Cls = this.defaultProjectile, extra = {}) {
     if (!Cls || this.width <= 0 || this.height <= 0) return
     const o = this.options
     const r = this.random
@@ -184,8 +214,9 @@ export class Engine {
         x: r.int(Math.min(b.x, b.width - b.x * 2), Math.max(b.x, b.width - b.x * 2)),
         y: r.int(Math.min(b.y, b.height * 0.5), Math.max(b.y, b.height * 0.5)),
       }
+      const size = { width: this.width, height: this.height }
       this.projectiles.push(
-        new Cls({ x, y: this.height, target, hue: inRange(r, o.hue, true), options: o, random: r }),
+        new Cls({ x, y: this.height, target, size, hue: inRange(r, o.hue, true), options: o, random: r, ...extra }),
       )
     }
   }
@@ -209,29 +240,50 @@ export class Engine {
     this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }))
   }
 
+  /**
+   * Adds particles of any kind (feathers...), as many as fit under `maxParticles`.
+   * @param {ParticleLike[]} particles
+   */
+  addParticles(particles) {
+    this.particles.push(...particles.slice(0, this.capacity()))
+  }
+
   /** @param {number} steps physics steps since the last draw */
   draw(steps) {
-    const { ctx, width, height, options: o } = this
+    const { ctx, trailCtx: tc, width, height, options: o } = this
     if (width <= 0 || height <= 0) return
-    // Fade the previous frame once per step, so trails look the same at 60 and 120 Hz.
+    // Fade the trail layer once per step, so trails look the same at 60 and 120 Hz.
     const fade = 1 - (1 - o.opacity) ** steps
-    ctx.globalCompositeOperation = 'destination-out'
-    ctx.fillStyle = `rgba(0, 0, 0, ${fade})`
-    ctx.fillRect(0, 0, width, height)
+    tc.globalCompositeOperation = 'destination-out'
+    tc.fillStyle = `rgba(0, 0, 0, ${fade})`
+    tc.fillRect(0, 0, width, height)
+    tc.globalCompositeOperation = 'lighter'
+    tc.lineCap = o.lineStyle
+    tc.lineJoin = 'round'
+    this.drawLayer(tc, 'trail')
+    tc.globalCompositeOperation = 'source-over'
 
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    ctx.drawImage(this.trail, 0, 0)
+    ctx.restore()
     if (o.boundaries.debug) {
       const b = o.boundaries
-      ctx.globalCompositeOperation = 'source-over'
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
       ctx.lineWidth = 1
       ctx.strokeRect(b.x, b.y, b.width - b.x * 3, b.height * 0.5 - b.y)
     }
+    this.drawLayer(ctx, 'sprite')
+  }
 
-    ctx.globalCompositeOperation = 'lighter'
-    ctx.lineCap = o.lineStyle
-    ctx.lineJoin = 'round'
-    const projectiles = this.projectiles
-    for (const p of projectiles) {
+  /**
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {'trail' | 'sprite'} layer
+   */
+  drawLayer(ctx, layer) {
+    for (const p of this.projectiles) {
+      if (p.layer !== layer) continue
       try {
         p.draw(ctx)
       } catch (error) {
@@ -239,7 +291,6 @@ export class Engine {
         this.projectiles = this.projectiles.filter((q) => q !== p)
       }
     }
-    for (const p of this.particles) p.draw(ctx, this.flickerRandom)
-    ctx.globalCompositeOperation = 'source-over'
+    for (const p of this.particles) if ((p.layer ?? 'trail') === layer) p.draw(ctx, this.flickerRandom)
   }
 }

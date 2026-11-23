@@ -2,10 +2,19 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. The flapping pixel chicken
-- **Then:** 2. Extras (sound, pointer launch, reduced motion, demo site)
+- **Up next:** 1. Extras (sound, pointer launch, reduced motion, demo site)
 
 ## Done
+
+- **The flapping pixel chicken** (2026-11-23, branch `phase-2/chicken`): original art as text grids
+  (`src/art/chicken.js`), `Sprite.fromPixels` and crisp sprite drawing (`src/sprite.js`), the chicken's rise/cross
+  flight, panic and explosion (`src/projectiles/chicken.js`), feathers (`src/feather.js`), the trail layer plus
+  crisp sprite layer (`src/engine.js`), `launch(type, count, init)`. Tests: `test/sprite.test.js`,
+  `test/chicken.test.js`, browser tests for the chicken's whole life and for leaving no ghost (with a control that
+  shows a trail-layer chicken would). Plan kept below under "The flapping pixel chicken (done)".
+  - Trail-layer copy cost, measured 2026-11-23 in headless Chromium at 1920x1080: 0.007 ms per frame at DPR 1,
+    0.043 ms at DPR 2 (a whole empty-sky draw: 1.0 ms and 4.6 ms, mostly the fade, which existed before). Too small
+    to be worth skipping when no sprites are in the sky.
 
 - **Fireworks engine** (2026-11-23, branch `phase-1/fireworks-engine`): fireworks-js-compatible options and methods
   (`src/options.js`, `src/index.js`), its rocket and particle motion (`src/projectiles/rocket.js`,
@@ -116,9 +125,9 @@ styles. Semantics below are taken from fireworks-js v2.10.8 source (`options.ts`
 - Demo gets controls: burst style, intensity, auto on/off.
 - Measure: frame time with the cap at a few values to choose the `maxParticles` default.
 
-## 1. The flapping pixel chicken
+## The flapping pixel chicken (done)
 
-Planned 2026-11-23. Branch `phase-2/chicken`.
+Planned and built 2026-11-23. Branch `phase-2/chicken`.
 
 An original 16-bit-style pixel chicken that flaps into the sky, panics, and explodes into feathers and fireworks.
 Plus what the projectile API needs for it, kept to that: sprites, a crisp sprite layer, per-launch options.
@@ -194,7 +203,7 @@ are added to the page, so canvas and container targets both work. Cost of the ex
 - Measure the trail-layer copy cost (above).
 - Demo: Chicken button, plus a flight choice (random, rise, cross).
 
-## 2. Extras
+## 1. Extras
 
 - Sounds for fireworks: opt-in, lazy-loaded, user-supplied files allowed (not for the chicken: user, 2026-11-23).
 - Pointer/touch launch at a point.

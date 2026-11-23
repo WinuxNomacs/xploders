@@ -184,7 +184,7 @@ describe('bursts', () => {
       burst = /** @type {const} */ ('ring')
     }
     const { engine } = makeShow({ burst: 'peony', particles: 12 })
-    const p = new Box({ x: 100, y: 600, target: { x: 100, y: 100 }, hue: 0, options: engine.options, random: engine.random })
+    const p = new Box({ x: 100, y: 600, target: { x: 100, y: 100 }, size: { width: 800, height: 600 }, hue: 0, options: engine.options, random: engine.random })
     p.explode(engine)
     const speeds = new Set(engine.particles.map((q) => q.speed))
     expect(speeds.size).toBe(1) // a ring: one shared speed
@@ -262,19 +262,21 @@ describe('limits and failures', () => {
 
 describe('rendering', () => {
   it('fades the trail once per step, so 60 and 120 Hz look the same', () => {
-    const { show, scheduler, canvas } = makeShow({ intensity: 0, opacity: 0.5 })
+    const { show, scheduler } = makeShow({ intensity: 0, opacity: 0.5 })
     show.start()
-    canvas.ctx.log.fills.length = 0
+    const trail = scheduler.layers[0].ctx.log
+    trail.fills.length = 0
     scheduler.frame(2 * (1000 / 60) + 0.01) // one frame covering two steps
-    expect(canvas.ctx.log.fills[0]).toBe('rgba(0, 0, 0, 0.75)')
+    expect(trail.fills[0]).toBe('rgba(0, 0, 0, 0.75)')
   })
 
   it('skips drawing on a frame with no step, so nothing is drawn twice', () => {
-    const { show, scheduler, canvas } = makeShow({ intensity: 0 })
+    const { show, scheduler } = makeShow({ intensity: 0 })
     show.start()
-    canvas.ctx.log.fills.length = 0
+    const trail = scheduler.layers[0].ctx.log
+    trail.fills.length = 0
     scheduler.frame(5)
-    expect(canvas.ctx.log.fills).toHaveLength(0)
+    expect(trail.fills).toHaveLength(0)
   })
 })
 

@@ -39,6 +39,8 @@ export class Particle {
     /** @type {[number, number][]} newest first */
     this.coordinates = Array.from({ length: Math.max(1, Math.floor(init.trail)) }, () => [init.x, init.y])
     this.dead = false
+    /** @type {'trail' | 'sprite'} */
+    this.layer = 'trail'
   }
 
   /**

@@ -4,8 +4,7 @@ Fireworks, and things that explode into fireworks, on a transparent HTML canvas.
 dependencies. Options and methods follow [fireworks-js](https://fireworks.js.org/), so a fireworks-js config works
 here.
 
-> Early development. Fireworks work; the chicken is still a placeholder square until the next phase (see
-> [upcoming-changes.md](upcoming-changes.md)).
+> Early development; see [upcoming-changes.md](upcoming-changes.md) for what's next.
 
 ## Install
 
@@ -46,7 +45,7 @@ so the page shows through.
 | ----------------------------- | ------------------------------------------------------------------------------------ |
 | `start()`                     | Runs the show, auto-launching at `intensity`                                          |
 | `launch(count)`               | Launches rockets; on a stopped show, runs until the sky is empty                      |
-| `launch(type, count)`         | Launches a registered type, such as `'chicken'`                                      |
+| `launch(type, count, init?)`  | Launches a registered type, such as `'chicken'`; `init` goes to each one             |
 | `waitStop(dispose?)`          | Stops auto-launch; the promise resolves once everything has burnt out                 |
 | `stop(dispose?)`              | Stops and clears at once. `dispose` also stops following the size and removes a canvas the show created |
 | `pause()`                     | Freezes or resumes, keeping everything in the sky                                     |
@@ -90,10 +89,56 @@ refresh rate.
 
 Not yet supported from fireworks-js: `mouse` and `sound` (planned).
 
+### The chicken
+
+An original pixel-art hen that flaps into the sky, panics at its target (frantic flapping, shaking, flashing), then
+explodes into a puff of feathers and a firework burst in the show's `burst` style.
+
+```js
+import { Chicken } from 'xploders'
+
+show.launch('chicken') // flies up from the bottom or across from a side, at random
+show.launch('chicken', 3, { flight: 'cross', scale: 4 })
+Chicken.defaults.panicSteps = 60 // change the default for every chicken
+```
+
+| Option       | Default    | Meaning                                                   |
+| ------------ | ---------- | --------------------------------------------------------- |
+| `flight`     | `'random'` | `'rise'` from the bottom, `'cross'` from a side edge      |
+| `scale`      | `3`        | CSS pixels per sprite pixel (the sprite is 16x16)         |
+| `speed`      | `3`        | px per 1/60 s                                             |
+| `panicSteps` | `30`       | Panic before the explosion, in 1/60 s steps               |
+| `feathers`   | `16`       | Feathers in the explosion (they count towards `maxParticles`) |
+
+To use your own art, replace `Chicken.sprite` with a sprite of the same layout: frames 0-3 flap (wings up, mid,
+down, mid), 4-5 panic, facing right.
+
+### Pixel sprites
+
+`Sprite.fromPixels(frames, palette, fps)` builds a sprite sheet from text grids, one character per pixel:
+
+```js
+import { Sprite } from 'xploders'
+
+const star = Sprite.fromPixels(
+  [
+    ['.y.', 'yyy', '.y.'],
+    ['y.y', '.y.', 'y.y'],
+  ],
+  { '.': null, y: '#ffd400' },
+)
+star.draw(ctx, frame, x, y, { scale: 4, flip: false, flash: false, alpha: 1 })
+```
+
+`new Sprite(image, {frameWidth, frameHeight, frames, fps})` works with any image or canvas holding frames side by
+side; an image that hasn't loaded yet is skipped.
+
 ### Custom projectiles
 
 Extend `Projectile`, override `draw(ctx)`, and optionally `update()` (one call per step; move with `moveTo(x, y)`),
-`shouldExplode()` and `explode(engine)`. Set `this.burst` to pick its burst style. Then register it:
+`shouldExplode()` and `explode(engine)`. Set `this.burst` to pick its burst style, and `this.layer = 'sprite'` to
+draw it crisp on top instead of with the fading firework trails (which would smear a moving picture). Then register
+it:
 
 ```js
 import { Xploders, Projectile } from 'xploders'

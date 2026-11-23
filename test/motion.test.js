@@ -28,7 +28,7 @@ describe('Rocket', () => {
   it('follows the fireworks-js trace path and explodes at its target', () => {
     const options = defaultOptions()
     const target = { x: 300, y: 120 }
-    const rocket = new Rocket({ x: 400, y: 600, target, hue: 0, options, random: new Random(1) })
+    const rocket = new Rocket({ x: 400, y: 600, target, size: { width: 800, height: 600 }, hue: 0, options, random: new Random(1) })
     const expected = referenceTrace(400, 600, 300, 120, options.traceSpeed, options.acceleration)
     for (const [x, y] of expected) {
       rocket.update()
@@ -44,7 +44,7 @@ describe('Rocket', () => {
 
 describe('Projectile', () => {
   it('flies a ballistic arc that peaks at its target', () => {
-    const p = new Projectile({ x: 100, y: 600, target: { x: 300, y: 200 }, hue: 0, options: defaultOptions(), random: new Random(1) })
+    const p = new Projectile({ x: 100, y: 600, target: { x: 300, y: 200 }, size: { width: 800, height: 600 }, hue: 0, options: defaultOptions(), random: new Random(1) })
     let steps = 0
     while (!p.shouldExplode() && steps < 1000) {
       p.update()

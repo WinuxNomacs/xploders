@@ -14,7 +14,7 @@ el('auto').addEventListener('click', () => {
   el('auto').textContent = `Auto: ${on ? 'on' : 'off'}`
 })
 el('fireworks').addEventListener('click', () => show.launch(5))
-el('chicken').addEventListener('click', () => show.launch('chicken'))
+el('chicken').addEventListener('click', () => show.launch('chicken', 1, { flight: el('flight').value }))
 el('clear').addEventListener('click', () => show.clear())
 el('burst').addEventListener('change', () => {
   const v = el('burst').value
