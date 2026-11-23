@@ -6,8 +6,10 @@ import { Particle } from './particle.js'
 import { Rocket } from './projectiles/rocket.js'
 import { Chicken } from './projectiles/chicken.js'
 import { bursts } from './bursts.js'
+import { Sprite, parsePixels } from './sprite.js'
+import { Feather } from './feather.js'
 
-export { Projectile, Particle, Rocket, Chicken, Random, bursts, defaultOptions }
+export { Projectile, Particle, Feather, Rocket, Chicken, Sprite, Random, bursts, defaultOptions, parsePixels }
 
 /**
  * @typedef {import('./options.js').Options} Options
@@ -15,13 +17,13 @@ export { Projectile, Particle, Rocket, Chicken, Random, bursts, defaultOptions }
  * @typedef {import('./options.js').BurstStyle} BurstStyle
  * @typedef {import('./engine.js').ProjectileClass} ProjectileClass
  * @typedef {import('./projectile.js').ProjectileInit} ProjectileInit
+ * @typedef {import('./projectiles/chicken.js').ChickenOptions} ChickenOptions
  */
 
 /** @type {Map<string, ProjectileClass>} */
-const registry = new Map([
-  ['rocket', Rocket],
-  ['chicken', Chicken],
-])
+const registry = new Map()
+registry.set('rocket', Rocket)
+registry.set('chicken', Chicken)
 
 /** @param {Element} el @returns {el is HTMLCanvasElement} */
 const isCanvas = (el) => typeof (/** @type {any} */ (el).getContext) === 'function'
@@ -39,9 +41,9 @@ export class Xploders {
   /**
    * @param {Element} target a canvas, or a container to create a canvas in
    * @param {XplodersOptions} [options]
-   * @param {Partial<import('./engine.js').Scheduler>} [scheduler] for tests: replaces requestAnimationFrame and the clock
+   * @param {Partial<import('./engine.js').Env>} [env] for tests: stand-ins for requestAnimationFrame, the clock and canvas creation
    */
-  constructor(target, options = {}, scheduler) {
+  constructor(target, options = {}, env) {
     /** @type {Options} */
     this.options = deepMerge(defaultOptions(), options)
     /** @type {Element} the element whose size the canvas follows */
@@ -56,7 +58,7 @@ export class Xploders {
       target.append(this.canvas)
     }
     this.random = new Random(this.options.seed)
-    this.engine = new Engine(this.canvas, this.options, this.random, scheduler)
+    this.engine = new Engine(this.canvas, this.options, this.random, env)
     this.engine.defaultProjectile = registry.get('rocket')
     /** @type {(() => void)[]} pending waitStop() promises */
     this.waiters = []
@@ -130,11 +132,13 @@ export class Xploders {
 
   /**
    * Launches rockets (`launch(5)`) or any registered type (`launch('chicken', 2)`).
+   * `init` goes to each projectile, e.g. `launch('chicken', 1, {flight: 'cross'})`.
    * On a stopped show the loop runs until the sky is empty, without auto-launch.
    * @param {string | number} [typeOrCount]
    * @param {number} [count]
+   * @param {Record<string, any>} [init]
    */
-  launch(typeOrCount = 1, count = 1) {
+  launch(typeOrCount = 1, count = 1, init = {}) {
     const type = typeof typeOrCount === 'string' ? typeOrCount : 'rocket'
     const n = typeof typeOrCount === 'number' ? typeOrCount : count
     const Cls = registry.get(type)
@@ -144,7 +148,7 @@ export class Xploders {
       this.engine.onEmpty = () => this.stop()
       this.engine.startLoop()
     }
-    this.engine.launch(n, Cls)
+    this.engine.launch(n, Cls, init)
     return this
   }
 

@@ -22,7 +22,11 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
 - `src/engine.js`: canvas, DPR scaling, fixed-step (1/60 s) loop, auto-launch, particle cap, drawing.
 - `src/projectile.js`: base class for launched objects (one `update()` per step; move with `moveTo`);
   `src/projectiles/` holds the built-in ones. `Rocket` reproduces fireworks-js `Trace` motion.
-- `src/particle.js` (fireworks-js `Explosion` motion), `src/bursts.js` (burst styles), `src/sprite.js`.
+- `src/particle.js` (fireworks-js `Explosion` motion), `src/bursts.js` (burst styles).
+- `src/sprite.js`: `parsePixels` (text grids to RGBA, pure) and `Sprite` (sheet built lazily on first draw, crisp,
+  flip, white flash silhouette). `src/art/chicken.js`: the original chicken art as text grids; `src/feather.js`.
+- Two layers in `Engine.draw`: things with `layer: 'trail'` draw on an offscreen layer that fades per step; the
+  visible canvas is cleared, gets that layer copied in, then `layer: 'sprite'` things draw crisp on top.
 - `src/random.js`: seedable RNG. Anything that shapes the show uses the show's `Random`, never `Math.random`, so
   seeded shows repeat at any frame rate; draw-time randomness (flicker) uses the engine's separate `flickerRandom`.
 - Option units are per 1/60 s step, matching fireworks-js's per-frame units; `test/motion.test.js` holds a port of

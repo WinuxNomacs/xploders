@@ -3,6 +3,7 @@
  * @property {number} x launch point
  * @property {number} y launch point
  * @property {{x: number, y: number}} target where it should explode
+ * @property {{width: number, height: number}} size the sky, CSS px
  * @property {number} hue firework hue chosen for this launch
  * @property {import('./options.js').Options} options the show's live options
  * @property {import('./random.js').Random} random the show's seeded generator
@@ -20,10 +21,13 @@ export class Projectile {
   static gravity = 0.15
 
   /** @param {ProjectileInit} init */
-  constructor({ x, y, target, hue, options, random }) {
+  constructor({ x, y, target, size, hue, options, random }) {
     this.x = x
     this.y = y
     this.target = target
+    this.size = size
+    /** @type {'trail' | 'sprite'} drawn with the fading fireworks, or crisp on top */
+    this.layer = 'trail'
     this.hue = hue
     this.options = options
     this.random = random

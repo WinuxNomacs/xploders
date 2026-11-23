@@ -18,11 +18,19 @@ export function fakeCanvas(width = 800, height = 600) {
   return { clientWidth: width, clientHeight: height, width: 0, height: 0, getContext: () => ctx, ctx }
 }
 
+/** A stand-in for the engine's environment: frames, clock and canvas creation. */
 export function fakeScheduler() {
   let time = 0
   /** @type {((now: number) => void) | null} */
   let pending = null
   const s = {
+    /** Trail layers the engine created. */
+    layers: [],
+    createCanvas: () => {
+      const c = fakeCanvas()
+      s.layers.push(c)
+      return c
+    },
     raf: (cb) => {
       pending = cb
       return 1
