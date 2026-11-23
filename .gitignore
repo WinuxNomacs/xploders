@@ -221,3 +221,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / JS tooling
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+.shot.mjs
