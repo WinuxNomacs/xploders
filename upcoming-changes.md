@@ -2,7 +2,7 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Projectile API and the pixel chicken
+- **Up next:** 1. The flapping pixel chicken
 - **Then:** 2. Extras (sound, pointer launch, reduced motion, demo site)
 
 ## Done
@@ -116,22 +116,90 @@ styles. Semantics below are taken from fireworks-js v2.10.8 source (`options.ts`
 - Demo gets controls: burst style, intensity, auto on/off.
 - Measure: frame time with the cap at a few values to choose the `maxParticles` default.
 
-## 1. Projectile API and the pixel chicken
+## 1. The flapping pixel chicken
 
-- Generic `Projectile`: custom draw/update, arc physics, rotation/spin, explode on apex, timer or target point; a
-  projectile chooses its own burst (the chicken: feathers plus fireworks).
-- `Sprite`: frame animation over any sprite sheet (image or canvas), so users can bring their own art.
-- Original 16-bit-style pixel chicken (white hen, red comb, flap/flail frames), drawn by us and stored in the repo.
-  Not the SNES Zelda chicken sprite: that is Nintendo's art.
-- `xploders.launch('chicken', opts)`, `Xploders.register(name, cls)` (exists in skeleton form).
-- Open: how the chicken flies (flapping arc vs. thrown and tumbling), whether it squawks (ties into sound, phase 2).
+Planned 2026-11-23. Branch `phase-2/chicken`.
+
+An original 16-bit-style pixel chicken that flaps into the sky, panics, and explodes into feathers and fireworks.
+Plus what the projectile API needs for it, kept to that: sprites, a crisp sprite layer, per-launch options.
+
+### Decisions (user, 2026-11-23)
+
+- **It flaps.** Each chicken picks at random between flapping **up from the bottom** to its target and flapping
+  **across** from a side edge to its target; an option can force one.
+- **Panic, then boom**: at its target it stops, flaps frantically, shakes and flashes for about half a second, then
+  explodes.
+- **Feathers + fireworks**: a puff of white pixel feathers that sway and drift down, plus a firework burst in the
+  show's `burst` style.
+- **No sounds** for the chicken (no squawk).
+
+### Art
+
+- Original pixel art, drawn by us as text grids in `src/art/chicken.js` (one character per pixel, plus a palette):
+  white hen, dark outline, grey shading, red comb and wattle, yellow-orange beak and feet. 16x16 per frame:
+  4 flap frames (wings up, mid, down, mid) and 2 panic frames (wings flared, feathers ruffled, eyes wide).
+  Not the SNES Zelda chicken sprite, which is Nintendo's art.
+- Kept as code, not a PNG: nothing to load, works the same in the script-tag build.
+- Before merging, I show you the sheet rendered at 8x and the chicken in flight for approval.
+
+### API
+
+- `Sprite.fromPixels(frames, palette)`: builds a sprite sheet from text grids, so users can make their own pixel
+  sprites the same way. `new Sprite(image, {frameWidth, frameHeight, frames, fps})` stays for any image or canvas
+  (an image that hasn't loaded yet is skipped, not an error).
+- `launch(type, count, init)`: the third argument goes to the projectile, e.g.
+  `show.launch('chicken', 3, {flight: 'cross', scale: 4})`.
+- `Chicken.defaults`: `flight: 'random' | 'rise' | 'cross'` (default random), `scale` (pixel size, default 3, so
+  48 CSS px), `speed`, `panicSteps` (default 30 = 0.5 s), `feathers` (count, default 16).
+- `Projectile.layer`: `'trail'` (drawn with the fading fireworks, like rockets) or `'sprite'` (drawn crisp, like the
+  chicken). Custom projectiles choose.
+
+### Behaviour
+
+- **Rise**: starts at `rocketsPoint` on the bottom edge, flies to its target at a steady speed, bobbing sideways in
+  time with the flaps.
+- **Cross**: starts just off the left or right edge at about the target's height, flies across bobbing up and down,
+  to the target (a random point inside the boundaries, as for rockets).
+- Faces the way it flies (sprite flipped). Flaps at about 12 frames a second; panic frames faster.
+- **Panic** (`panicSteps`): hovers, shakes 1-2 px (seeded), flashes white every few steps, then explodes.
+- **Explosion**: `engine.burst()` in the show's style at the chicken's hue, plus feathers: small pixel feathers that
+  burst outward, slow quickly, then fall slowly while swaying and turning, and fade near the end (about 2-3 s).
+  Feathers count towards `maxParticles`.
+
+### Rendering: a crisp sprite layer
+
+Today everything is drawn on one canvas whose previous frame fades a little each step; that is what makes the
+firework trails. A moving sprite drawn there would leave a smeared ghost behind it. So the fireworks move to an
+offscreen trail layer (faded exactly as now), and each frame the visible canvas is cleared, the trail layer copied in,
+and sprite-layer things (chicken, feathers) drawn on top, pixel-snapped with image smoothing off. No extra elements
+are added to the page, so canvas and container targets both work. Cost of the extra copy to be measured at
+1920x1080, DPR 1 and 2; if it matters, the copy is skipped when no sprites are in the sky.
+
+### What can go wrong
+
+- A user-supplied sprite image not loaded or broken: drawn as nothing until it is ready; no error.
+- No canvas available to build the sheet (Node, SSR): the sheet is built lazily on first draw, in the browser.
+- Resize: the trail layer is recreated at the new size (trails in flight are lost, as now).
+- A chicken whose target is off-screen after a resize: still explodes when it arrives (cross mode clamps its start).
+
+### Tests
+
+- Unit (Node): text grids to pixels (palette lookup, ragged rows and unknown characters rejected); rise and cross
+  flights reach their target, bob within bounds, face their direction; `flight` forced by option or launch init;
+  panic lasts `panicSteps` with the chicken within its shake radius; explosion makes feathers plus a burst in the
+  show's style; feathers fall slower than sparks, sway, fade and die; feathers respect `maxParticles`; launch's
+  third argument reaches the projectile.
+- Browser: a chicken flies, panics and explodes without errors; the spot it has left is clear on the visible canvas
+  (no ghost); fireworks trails still fade; both target types still work; screenshots of each stage looked at.
+- Measure the trail-layer copy cost (above).
+- Demo: Chicken button, plus a flight choice (random, rise, cross).
 
 ## 2. Extras
 
-- Sounds: opt-in, lazy-loaded, user-supplied files allowed.
+- Sounds for fireworks: opt-in, lazy-loaded, user-supplied files allowed (not for the chicken: user, 2026-11-23).
 - Pointer/touch launch at a point.
 - Respect `prefers-reduced-motion`.
-- More projectiles.
+- More projectiles; projectile extras if wanted (spin, explode on a timer).
 - Demo/docs site on GitHub Pages (workflow triggered by hand only).
 
 ## Decisions
