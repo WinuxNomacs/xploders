@@ -1,0 +1,49 @@
+{
+  "name": "xploders",
+  "version": "0.0.0",
+  "description": "Fireworks, and things that explode into fireworks, on an HTML canvas. Zero dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/xploders.mjs",
+  "module": "./dist/xploders.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/xploders.mjs"
+    }
+  },
+  "unpkg": "./dist/xploders.min.js",
+  "jsdelivr": "./dist/xploders.min.js",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "fireworks",
+    "canvas",
+    "animation",
+    "particles"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run test:browser"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.1",
+    "esbuild": "0.28.2",
+    "eslint": "10.15.0",
+    "globals": "17.14.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}
