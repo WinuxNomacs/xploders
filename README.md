@@ -164,7 +164,7 @@ Needs Node 20 or newer.
 ```sh
 npm install
 npx playwright install chromium   # once, for the browser tests
-npm run dev                       # demo at http://127.0.0.1:8000/demo/ (PORT=... to change)
+npm run dev                       # demo at http://127.0.0.1:8000/demo/, or the next free port (prints the URL)
 npm run check                     # lint, typecheck, unit tests, build, browser tests
 ```
 

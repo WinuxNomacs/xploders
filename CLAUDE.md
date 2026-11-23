@@ -5,8 +5,8 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
 
 ## Commands
 
-- `npm run dev`: serves the repo root; demo at `/demo/` (loads `src/` directly, no build). `PORT` env var changes the
-  port (default 8000).
+- `npm run dev`: serves the repo root; demo at `/demo/` (loads `src/` directly, no build). Starts at `PORT`
+  (default 8000) and moves to the next free port if it is taken; it prints the URL it used.
 - `npm run check`: lint, typecheck, unit tests, build, browser tests. Run before every merge.
 - `npm test`: Vitest, Node only (`test/*.test.js`): no DOM; `test/helpers.js` has a recording fake canvas and a
   scheduler the test drives frame by frame.
