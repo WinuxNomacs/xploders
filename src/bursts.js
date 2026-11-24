@@ -7,9 +7,9 @@ import { shapes, animals, drawing } from './shapes.js'
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 /** Front flames' launch speed, px/step at burst size 1; they travel about ten times this. */
 const FIREBALL_SPEED = 6
-/** Saturn's ball and ring edge launch speeds, px/step: the ring flies about twice as far. */
+/** Saturn's ball and ring edge launch speeds, px/step: the ring flies nearly three times as far. */
 const SATURN_BALL = 4
-const SATURN_RING = 9
+const SATURN_RING = 11.25
 /** A shape's outermost sparks' launch speed, px/step. */
 const SHAPE_SPEED = 8
 
@@ -144,10 +144,11 @@ export const bursts = {
 
   // A ball of sparks in the launch colour inside one flattened, tilted ring in the
   // opposite colour. Shared friction keeps the ball round and the ring an ellipse.
+  // The ring gets twice the ball's share again, so it reads as a dense band.
   saturn: (c) => {
     const r = c.random
     const ball = Math.max(1, Math.round(c.count * 0.55))
-    const ring = Math.max(0, c.count - ball)
+    const ring = Math.max(0, 2 * (c.count - ball))
     const decay = inRange(r, c.options.decay)
     const ringHue = (c.hue + 180) % 360
     const tilt = r.range(-0.6, 0.6)

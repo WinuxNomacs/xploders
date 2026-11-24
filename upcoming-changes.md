@@ -7,6 +7,11 @@
 
 ## Done
 
+- **Wider, denser Saturn rings** (2026-11-24, branch `fix/saturn-rings`; request in `new.md`: "the rings need to be
+  about 25% wider and denser"): the ring's launch speed 9 to 11.25 px/step (25% wider) and twice the sparks (about
+  1.6 times as dense at the new size), the ball unchanged, so a Saturn uses about 1.45 times `particles`
+  (`src/bursts.js`). Test in `test/shapes.test.js`; seen in headless Chromium.
+
 - **Performance review** (2026-11-24, branches `phase-11/performance`, `phase-11/speedups`, `fix/bench-scenes`): the
   bench page (`demo/bench.html`, `demo/bench.js`, on the site), skipping frames nobody would see (out of view, or
   an empty sky that has faded) with skipped steps drawn later (`src/engine.js` `shouldDraw`, `fadeSteps`;

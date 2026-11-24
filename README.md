@@ -113,7 +113,7 @@ The fireworks-js `sound` option is not supported; it is ignored if passed.
 | `'willow'`   | Long-lived gold strands that droop                                                                  |
 | `'crackle'`  | Flickering sparks that pop into tiny sparks near the end                                            |
 | `'fireball'` | A white flash, then a ball of fire with a blue heart that rises, cools to red and turns to smoke    |
-| `'saturn'`   | A ball in the launch colour inside a flattened, tilted ring in the opposite colour                  |
+| `'saturn'`   | A ball in the launch colour inside a wide, dense, flattened, tilted ring in the opposite colour. Uses about 1.45 times `particles`, for the ring |
 | `'shapes'`   | An outline picked at random: a tilted ellipse, a polygon, a spiral, a smiley, a heart, or a star with little fireworks for eyes |
 | `'animals'`  | A zoo animal's outline picked at random, facing left or right: elephant, giraffe, lion, monkey, penguin, flamingo, snake or turtle. Uses twice `particles`, since legs and tails need the points |
 
