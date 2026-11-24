@@ -167,16 +167,37 @@ steaks, and the demo's launch buttons and click to fire.
 - **The Moo!: speech bubble and shake.** A pixel speech bubble saying "MOO!" pops up beside the cow while it bounces
   and shakes, eyes wide, for about half a second; then it explodes.
 
-### Proposed (to confirm when planning the phase)
+- **Look: black-and-white** spotted dairy cow with a pink nose and udder (planned 2026-11-24).
+- **Start: a random spot 10-90% across the bottom edge**, clicks on the sky included, like the Jug-o-BOOM
+  (`launchPoint` in `Cow.defaults`); it floats from there to its target.
+- **Burst: the show's burst style** in the launch hue, like the chicken.
+- **Steaks: cooked T-bones**: small brown grilled steaks with a white bone and grill marks, tumbling as they fall.
 
-- Original pixel art (`src/art/cow.js`): a black-and-white cow, frames for kicking legs and an excited, open-mouthed
-  frame; the bubble as its own sprite with "MOO!" from the 3x5 font (adds "!").
-- `src/projectiles/cow.js`: `Cow` with `defaults` (scale, hover time, Moo! time, steaks, burst), registered as
-  `'cow'`; a Cow button in the demo.
-- Explosion: the show's burst (a firework in the launch hue), steaks (tumbling sprite pieces like shards, on the
-  sprite layer) and milk splatters (white droplets that fly out, fall and fade; drawn on the sprite layer so they
-  stay white rather than adding up to glare). Under reduced motion: no shake, the bubble still shows.
-- Counts toward `maxParticles` like shards and feathers.
+### Design
+
+- Original pixel art (`src/art/cow.js`, text grids for `Sprite.fromPixels`): side view facing right, about 24x16
+  sprite pixels at scale 3 by default; frames 0-3 legs kicking as it floats, 4-5 excited (eyes wide, mouth open).
+  The speech bubble is its own sprite, "MOO!" from the 3x5 font (moved to a shared `src/art/font.js`, adding M and
+  "!"), drawn beside the cow's head on the side it faces, kept on screen. The T-bone is its own small sprite.
+- `src/projectiles/cow.js`: `Cow`, registered as `'cow'`, `layer: 'sprite'`. Flight: eases up from below the
+  bottom edge to its target (fast, slowing as it arrives), legs kicking and a gentle bob; hovers about 0.3 s; then
+  the Moo!: excited frames, bubble showing, bouncing and shaking for about 0.5 s; then it explodes. Faces the way it
+  drifts. Defaults: `scale`, `speed`, `hoverSteps`, `mooSteps`, `steaks`, `milk`, `launchPoint`.
+- Explosion: `engine.burst` in the show's style, then steaks (`src/steak.js`, tumbling sprite pieces like shards)
+  and milk splatters (`src/milk.js`, white droplets that fly out, fall, stretch and fade; on the sprite layer so they
+  stay white instead of adding up to glare, so they show on light pages too). All count towards `maxParticles`.
+- Reduced motion: no shake or bounce; the bubble and excited frames still show.
+- Demo: a Cow button in the controls panel; it joins click to fire (a click launches a cow once Cow is picked).
+  README: a Cow section with its options table; `Cow.sprite` replaceable like the chicken's.
+
+### Tests
+
+- Unit (`test/cow.test.js`): art grids are well formed (equal widths, palette keys); start spot within 10-90% at
+  the bottom, launchAt included; it reaches and hovers at the target, then Moo!s for `mooSteps` with the bubble,
+  then explodes; no shake when calm; explosion gives the burst in the show's style, the steaks and milk, trimmed to
+  `maxParticles`; steaks and milk fall and die; the bubble stays inside the canvas near an edge.
+- Browser: a cow's whole life in the demo without errors; the Cow button and click to fire with Cow picked.
+- Seen in a real browser frame by frame: the art, the bubble, the explosion on the dark demo and on a light page.
 
 ## 2. Demo boundaries editor
 
