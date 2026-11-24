@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shapes, alongPath } from '../src/shapes.js'
+import { shapes, alongPath, animals, drawing } from '../src/shapes.js'
 import { bursts } from '../src/bursts.js'
 import { defaultOptions } from '../src/options.js'
 import { Random } from '../src/random.js'
@@ -122,5 +122,49 @@ describe('Saturn burst', () => {
   it('wraps the opposite hue round the colour wheel', () => {
     const parts = bursts.saturn(c(20, 1, 300))
     expect(new Set(parts.map((p) => p.hue))).toEqual(new Set([300, 120]))
+  })
+})
+
+describe('Animals burst', () => {
+  for (const name of Object.keys(animals)) {
+    it(`draws a ${name} of exactly n points, centred, within radius 1`, () => {
+      const pts = drawing(animals[name], 100)
+      expect(pts).toHaveLength(100)
+      const xs = pts.map(([x]) => x)
+      const ys = pts.map(([, y]) => y)
+      for (const [x, y] of pts) expect(Math.hypot(x, y)).toBeLessThanOrEqual(1 + 1e-9)
+      expect(Math.max(...pts.map(([x, y]) => Math.hypot(x, y)))).toBeCloseTo(1)
+      expect(Math.min(...xs) + Math.max(...xs)).toBeCloseTo(0) // centred on its box
+      expect(Math.min(...ys) + Math.max(...ys)).toBeCloseTo(0)
+    })
+  }
+
+  it('uses twice the count, keeps its form as it moves, and faces both ways', () => {
+    const facings = new Set()
+    for (let seed = 1; seed <= 20; seed++) {
+      const parts = bursts.animals(c(50, seed))
+      expect(parts).toHaveLength(100)
+      expect(new Set(parts.map((p) => p.decay)).size).toBe(1)
+      const v = parts.map((p) => [Math.cos(p.angle) * p.speed, Math.sin(p.angle) * p.speed])
+      run(parts, 12)
+      const i = v.findIndex(([vx]) => Math.abs(vx) > 1)
+      const k = (parts[i].x - 400) / v[i][0]
+      const drop = parts[i].y - 300 - v[i][1] * k
+      parts.forEach((p, j) => {
+        expect(p.x - 400).toBeCloseTo(v[j][0] * k, 6)
+        expect(p.y - 300).toBeCloseTo(v[j][1] * k + drop, 6)
+      })
+      // which animal and which way: its launch points are one drawing, or that drawing mirrored
+      const far = Math.max(...v.map(([x, y]) => Math.hypot(x, y)))
+      const launch = v.map(([x, y]) => [x / far, y / far])
+      const match = (/** @type {number[][]} */ pts) => pts.every(([x, y], j) => Math.abs(x - launch[j][0]) < 1e-9 && Math.abs(y - launch[j][1]) < 1e-9)
+      const found = Object.keys(animals).flatMap((name) => {
+        const d = drawing(animals[name], 100)
+        return [match(d) && 'right', match(d.map(([x, y]) => [-x, y])) && 'left'].filter(Boolean)
+      })
+      expect(found).toHaveLength(1)
+      facings.add(found[0])
+    }
+    expect(facings.size).toBe(2)
   })
 })

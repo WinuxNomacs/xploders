@@ -1,7 +1,7 @@
 import { Particle } from './particle.js'
 import { inRange } from './random.js'
 import { Core, Flame, Flash, Glow, Smoke } from './fireball.js'
-import { shapes } from './shapes.js'
+import { shapes, animals, drawing } from './shapes.js'
 
 /** Turn between flames in a sunflower spread, radians. */
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
@@ -195,6 +195,19 @@ export const bursts = {
         return particle(c, { angle: Math.atan2(vy, vx), speed: Math.hypot(vx, vy), hue: eyeHue, decay, flicker: true })
       }),
     ]
+  },
+
+  // A zoo animal's outline picked at random, facing left or right, built like
+  // `shapes`. Twice the count, since legs, tails and trunks need the points.
+  animals: (c) => {
+    const r = c.random
+    const names = Object.keys(animals)
+    const name = names[r.int(0, names.length - 1)]
+    const decay = inRange(r, c.options.decay)
+    const facing = r.next() < 0.5 ? 1 : -1
+    return drawing(animals[name], c.count * 2).map(([x, y]) =>
+      particle(c, { angle: Math.atan2(y, x * facing), speed: SHAPE_SPEED * Math.hypot(x, y), decay }),
+    )
   },
 }
 
