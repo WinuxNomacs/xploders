@@ -2,7 +2,8 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** nothing planned; new requests go in `new.md`
+- **Up next:** 1. Themes: the theme model and the 64-bit chicken (details below)
+- **Then:** 2. The 64-bit Jug-o-BOOM; 3. The 64-bit cow
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
@@ -411,6 +412,45 @@ idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same with
 - Particle strokes: a cached colour string per particle with `globalAlpha` instead of a new `hsla()` string per
   particle per frame.
 - Fewer per-frame array allocations in `drawLayer`.
+
+## 1-3. Themes: 64-bit art by default, Retro kept
+
+Request (`new.md`, 2026-11-24): "Give the pixelated characters (e.g. chickens, cows, jugs) a 64bit option with a more
+refined 64bit side scroller video game rendered appearance as their default theme. Keep the current appearance that
+can be accessed via a Retro theme option or flag. Keep the model flexible as we'll be adding other themes and
+characters".
+
+Builds on: each character's art is one replaceable sprite built from text grids (`Chicken.sprite`, `Jug.sprite`,
+`Cow.sprite`, `Cow.bubble`), with its own small sprites for what flies out (feathers in `src/feather.js`, shards and
+steaks through `Shard`'s `sprite`, milk drawn as shapes); `Sprite.fromPixels` and painted grids (`src/art/jug.js`).
+
+### Decisions (user, 2026-11-24)
+
+- **64-bit look: detailed pixel art**, still crisp: about three times the pixels per character (a 48x48 chicken
+  instead of 16x16), smooth shading, highlights and more colours, like late-90s side scrollers; original art drawn
+  by us, the same size on screen.
+- **Theme setting: a show option plus a per-launch override:** `theme: '64bit'` (default) or `'retro'`, switchable
+  with `updateOptions`; `show.launch('cow', 1, {theme: 'retro'})` overrides it. Themes are registered by name; a
+  character without art for a theme falls back to the default theme's.
+- **Scope: characters and their pieces:** chicken, jug and cow, plus feathers, shards, steaks, milk and the MOO!
+  bubble. Fireworks unchanged.
+- **Demo: a Theme menu** in the controls panel (64-bit, Retro), next to Burst, switching the whole show live.
+
+### Proposed design (to confirm when building phase 1)
+
+- Each character class gets `static themes = { retro: {...}, '64bit': {...} }`: per theme its sprites and a
+  `pixelSize` (sprite pixels per retro pixel: retro 1, 64-bit 1/3), so `scale` keeps meaning the on-screen size in
+  every theme. A projectile picks its theme at launch (`init.theme`, else the show's `theme`, else the default),
+  and passes it to its pieces. `Xploders.themes` lists the known names; a new theme is a new key, a new character
+  supplies its own `themes`. `Chicken.sprite` and friends become the retro entries (README updated: replace art per
+  theme).
+- 64-bit art painted procedurally into grids, as the jug is (shapes, shading ramps, highlights), so it stays
+  original and editable; each frame layout matches retro's (flap, panic; wick; kick, excited).
+- Phases: 1. the theme model, the option and override, the demo menu, and the 64-bit chicken with its feathers;
+  2. the 64-bit jug with its shards and wick flame; 3. the 64-bit cow with its bubble, steaks and milk.
+- Tests per phase: theme resolution (option, override, fallback), the same on-screen size in both themes, art grids
+  well formed, the demo menu switching live; each new character looked at frame by frame in a real browser beside
+  its retro version.
 
 ## Fixes from the code review of 2026-11-24 (done)
 
