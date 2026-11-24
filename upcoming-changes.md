@@ -332,12 +332,35 @@ Builds on: the measurements so far (in Done): step + draw per particle count, th
 cost (large additive soft dots are fill-rate bound: 10 jug fireballs about 76 ms per frame in headless Chromium at
 DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src/engine.js`).
 
-Proposed, to plan now that the other planned updates are done: profile the demo in a real GPU-backed browser as well as headless
-(headless uses software rendering, so its numbers are pessimistic); measure where frame time goes (trail fade,
-additive flames, sprite draws, particle updates); candidates to weigh: idling the loop when the sky is empty and
-auto-launch is off, a lower-resolution trail layer at high DPR, capping fireball fill (fewer, cached bigger dots),
-pausing when the tab or canvas is hidden (`document.hidden`, `IntersectionObserver`), and batching draws by style.
-Each change measured before and after, on the same machine in the same session.
+### Decisions (user, 2026-11-24)
+
+- **Only speed-ups that leave the show looking the same.** Anything that would change the look (lower-resolution
+  trails at high DPR, fewer fireball flames) comes back as a proposal with before/after screenshots and numbers.
+- **A bench page** (`/demo/bench.html`, kept in the repo and on the site): fixed, seeded scenes run for a few seconds
+  each, with frame times to copy. The user runs it in their real browser before and after.
+- **Stop drawing when nothing can be seen:** while the canvas is out of view, and once an empty sky has faded.
+
+### Findings that shape the plan
+
+- Browsers already stop `requestAnimationFrame` in a hidden tab, so a hidden tab costs nothing now; a canvas
+  scrolled out of view on a visible tab still draws every frame.
+- With an empty sky, `draw` still fades and copies the whole trail layer and clears the canvas every frame.
+
+### Order
+
+1. The bench page alone, merged and published, so the live site measures the current code ("before").
+2. Speed-ups on a branch, measured headless against the same scenes; not published until the user has run "before"
+   on the live site.
+3. Publish; the user runs "after".
+
+### Candidates (each measured, kept only if it looks the same)
+
+- Skip drawing while the canvas is out of view (`IntersectionObserver`), still stepping so time and `waitStop` hold.
+- Skip drawing once the sky is empty and its trails have faded (the steps that takes follow from `opacity`); the
+  boundaries outline still draws.
+- Particle strokes: a cached colour string per particle with `globalAlpha` instead of a new `hsla()` string per
+  particle per frame.
+- Fewer per-frame array allocations in `drawLayer`.
 
 ## Fixes from the code review of 2026-11-24 (done)
 
