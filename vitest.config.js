@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  test: { include: ['test/**/*.test.js'], exclude: ['test/browser/**'] },
+  test: { include: ['test/**/*.test.js'], exclude: ['test/browser/**'], setupFiles: ['test/setup.js'] },
 })

@@ -39,6 +39,7 @@
  * @property {boolean} autoresize follow the canvas or container size
  * @property {BurstStyle | BurstStyle[]} burst burst style, or a list to pick from per firework
  * @property {number} maxParticles cap on live particles
+ * @property {number} maxProjectiles cap on projectiles in flight
  * @property {Mouse} mouse pointer launch
  * @property {'auto' | 'always' | 'ignore'} reducedMotion calm the show when the visitor asks for reduced motion
  * @property {number} [seed] seed for a repeatable show
@@ -75,17 +76,22 @@ export function defaultOptions() {
     autoresize: true,
     burst: 'peony',
     maxParticles: 4000,
+    maxProjectiles: 100,
     mouse: { click: false, move: false, max: 1, projectile: 'rocket' },
     reducedMotion: 'auto',
   }
 }
+
+/** Keys that would reach an object's prototype; options from untrusted JSON must not set them. */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
 /** @param {unknown} v @returns {v is Record<string, any>} */
 const isPlainObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v)
 
 /**
  * Merges `source` into `target` in place: nested objects merge, everything else
- * (arrays included) replaces. Undefined values are skipped.
+ * (arrays included) replaces. Undefined values are skipped, and so are
+ * `__proto__`, `constructor` and `prototype` (no prototype pollution).
  * @template {Record<string, any>} T
  * @param {T} target
  * @param {Record<string, any>} source
@@ -95,7 +101,7 @@ export function deepMerge(target, source) {
   /** @type {Record<string, any>} */
   const t = target
   for (const [key, value] of Object.entries(source)) {
-    if (value === undefined) continue
+    if (value === undefined || UNSAFE_KEYS.has(key)) continue
     if (isPlainObject(value) && isPlainObject(t[key])) deepMerge(t[key], value)
     else t[key] = Array.isArray(value) ? [...value] : value
   }

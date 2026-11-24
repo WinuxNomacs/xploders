@@ -4,8 +4,54 @@
  *
  * Flames and the glow draw on the trail layer, whose additive blending makes
  * overlapping flames burn white-hot in the middle. Smoke is dark, which an
- * additive layer can't show, so it draws on the sprite layer.
+ * additive layer can't show, so it draws on the sprite layer, behind sprites.
+ *
+ * All three draw soft dots made once and cached, scaled with drawImage: far
+ * cheaper than a new radial gradient per piece per frame.
  */
+import { createCanvas } from './sprite.js'
+
+const DOT = 64
+/** @type {Map<string, HTMLCanvasElement | OffscreenCanvas>} */
+const dots = new Map()
+
+/**
+ * A soft round dot with these gradient stops, made on first use.
+ * @param {string} key
+ * @param {[number, string][]} stops
+ */
+function softDot(key, stops) {
+  let dot = dots.get(key)
+  if (!dot) {
+    dot = createCanvas(DOT, DOT)
+    /** @type {any} */
+    const c = dot.getContext('2d')
+    const g = c.createRadialGradient(DOT / 2, DOT / 2, 0, DOT / 2, DOT / 2, DOT / 2)
+    for (const [at, colour] of stops) g.addColorStop(at, colour)
+    c.fillStyle = g
+    c.fillRect(0, 0, DOT, DOT)
+    dots.set(key, dot)
+  }
+  return dot
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {HTMLCanvasElement | OffscreenCanvas} dot
+ * @param {number} x
+ * @param {number} y
+ * @param {number} r
+ * @param {number} alpha
+ */
+function drawDot(ctx, dot, x, y, r, alpha) {
+  if (!(alpha > 0) || !(r > 0)) return
+  ctx.globalAlpha = Math.min(1, alpha)
+  ctx.drawImage(dot, x - r, y - r, r * 2, r * 2)
+  ctx.globalAlpha = 1
+}
+
+/** Flame colours are cached in this many steps over a flame's life. */
+const FLAME_STEPS = 24
 
 /**
  * @typedef {object} FlameInit
@@ -73,15 +119,14 @@ export class Flame {
 
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    const r = this.radius
-    const colour = `${this.hue}, 100%, ${this.lightness}%`
-    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r)
-    g.addColorStop(0, `hsla(${colour}, ${this.alpha})`)
-    g.addColorStop(1, `hsla(${colour}, 0)`)
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2)
-    ctx.fill()
+    const step = Math.min(FLAME_STEPS - 1, Math.floor(this.t * FLAME_STEPS))
+    const t = step / (FLAME_STEPS - 1)
+    const colour = `${Math.round(55 * (1 - t))}, 100%, ${Math.round(92 - 50 * t)}%`
+    const dot = softDot(`flame${step}`, [
+      [0, `hsla(${colour}, 1)`],
+      [1, `hsla(${colour}, 0)`],
+    ])
+    drawDot(ctx, dot, this.x, this.y, this.radius, this.alpha)
   }
 }
 
@@ -118,16 +163,12 @@ export class Glow {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const t = this.t
-    const r = this.maxRadius * (1 - (1 - t) ** 3) + 1
-    const a = 0.55 * (1 - t)
-    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r)
-    g.addColorStop(0, `hsla(50, 100%, 90%, ${a})`)
-    g.addColorStop(0.4, `hsla(30, 100%, 60%, ${a * 0.6})`)
-    g.addColorStop(1, 'hsla(15, 100%, 50%, 0)')
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2)
-    ctx.fill()
+    const dot = softDot('glow', [
+      [0, 'hsla(50, 100%, 90%, 1)'],
+      [0.4, 'hsla(30, 100%, 60%, 0.6)'],
+      [1, 'hsla(15, 100%, 50%, 0)'],
+    ])
+    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (1 - (1 - t) ** 3) + 1, 0.55 * (1 - t))
   }
 }
 
@@ -159,6 +200,8 @@ export class Smoke {
     this.dead = false
     /** @type {'sprite'} */
     this.layer = 'sprite'
+    /** drawn behind the sprites flying through it */
+    this.behind = true
   }
 
   /** @returns {boolean} never pops */
@@ -180,15 +223,10 @@ export class Smoke {
 
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    const a = this.alpha
-    if (a <= 0) return
-    const r = this.radius0 * (1 + (1.5 * this.age) / this.life)
-    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r)
-    g.addColorStop(0, `hsla(20, 6%, 38%, ${a})`)
-    g.addColorStop(1, 'hsla(20, 6%, 38%, 0)')
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2)
-    ctx.fill()
+    const dot = softDot('smoke', [
+      [0, 'hsla(20, 6%, 38%, 1)'],
+      [1, 'hsla(20, 6%, 38%, 0)'],
+    ])
+    drawDot(ctx, dot, this.x, this.y, this.radius0 * (1 + (1.5 * this.age) / this.life), this.alpha)
   }
 }

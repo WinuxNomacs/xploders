@@ -241,11 +241,20 @@ export class Xploders {
   }
 
   /**
-   * Resizes the canvas, by default to the container's size.
+   * Resizes the drawing, by default to the canvas's own size on the page.
    * @param {{width?: number, height?: number}} [size] CSS pixels
    */
-  updateSize({ width = this.container.clientWidth, height = this.container.clientHeight } = {}) {
+  updateSize(size = {}) {
+    const measured = size.width === undefined && size.height === undefined
+    const { width = this.canvas.clientWidth, height = this.canvas.clientHeight } = size
     this.engine.resize(width, height)
+    // A canvas with no CSS size takes its size from its backing store, which
+    // resize just scaled by devicePixelRatio: it would grow on every resize.
+    // Keep the measured size in CSS pixels instead.
+    if (measured) {
+      if (this.canvas.clientWidth !== width) this.canvas.style.width = `${width}px`
+      if (this.canvas.clientHeight !== height) this.canvas.style.height = `${height}px`
+    }
     return this
   }
 
