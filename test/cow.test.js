@@ -178,8 +178,8 @@ describe('Cow speech bubble', () => {
     const c = cow()
     const ctx = fakeCanvas().ctx
     let drawn = 0
-    const draw = Cow.bubble.draw
-    Cow.bubble.draw = () => drawn++
+    const draw = Cow.themes.retro.bubble.draw
+    Cow.themes.retro.bubble.draw = () => drawn++
     try {
       c.draw(/** @type {any} */ (ctx))
       expect(drawn).toBe(0)
@@ -187,7 +187,7 @@ describe('Cow speech bubble', () => {
       c.draw(/** @type {any} */ (ctx))
       expect(drawn).toBe(1)
     } finally {
-      Cow.bubble.draw = draw
+      Cow.themes.retro.bubble.draw = draw
     }
   })
 })

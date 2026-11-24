@@ -1,7 +1,14 @@
 import { Projectile } from '../projectile.js'
 import { Sprite } from '../sprite.js'
 import { Feather } from '../feather.js'
+import { pickTheme } from '../themes.js'
 import { palette, flapFrames, panicFrames } from '../art/chicken.js'
+import * as hen64 from '../art/chicken64.js'
+
+/**
+ * @typedef {import('../themes.js').ThemeArt & {feather?: Sprite}} ChickenArt
+ *   `feather`: the explosion's feathers, three poses (tilted right, flat, tilted left)
+ */
 
 /**
  * @typedef {object} ChickenOptions
@@ -29,8 +36,19 @@ export class Chicken extends Projectile {
     feathers: 16,
   })
 
-  /** Frames 0-3 flap (up, mid, down, mid), 4-5 panic. Replace with your own art in the same layout. */
-  static sprite = Sprite.fromPixels([...flapFrames, ...panicFrames], palette)
+  /**
+   * Art per theme. Frames 0-3 flap (up, mid, down, mid), 4-5 panic, facing right. Replace a theme's
+   * `sprite` with your own art in the same layout, or add a theme under a new name.
+   * @type {Record<string, ChickenArt>}
+   */
+  static themes = {
+    '64bit': {
+      sprite: Sprite.fromPixels([...hen64.flapFrames, ...hen64.panicFrames], hen64.palette),
+      pixelSize: 1 / 3,
+      feather: Sprite.fromPixels(hen64.featherFrames, hen64.palette),
+    },
+    retro: { sprite: Sprite.fromPixels([...flapFrames, ...panicFrames], palette), pixelSize: 1 },
+  }
 
   /** @param {import('../projectile.js').ProjectileInit & ChickenOptions} init */
   constructor(init) {
@@ -38,6 +56,7 @@ export class Chicken extends Projectile {
     const d = Chicken.defaults
     const r = init.random
     this.layer = /** @type {const} */ ('sprite')
+    this.art = pickTheme(Chicken.themes, this.theme)
     this.scale = init.scale ?? d.scale
     this.speed = init.speed ?? d.speed
     this.panicSteps = init.panicSteps ?? d.panicSteps
@@ -46,7 +65,7 @@ export class Chicken extends Projectile {
     /** @type {'rise' | 'cross'} */
     this.flight = flight === 'random' ? (r.next() < 0.5 ? 'rise' : 'cross') : flight
 
-    const half = (Chicken.sprite.frameWidth * this.scale) / 2
+    const half = (this.art.sprite.frameWidth * this.art.pixelSize * this.scale) / 2
     if (this.flight === 'cross') {
       const fromLeft = r.next() < 0.5
       const startY = init.target.y + r.range(-40, 40)
@@ -105,12 +124,20 @@ export class Chicken extends Projectile {
     engine.addParticles(
       Array.from(
         { length: this.featherCount },
-        () => new Feather({ x: this.x, y: this.y, scale: Math.max(1, this.scale - 1), random: this.random }),
+        () =>
+          new Feather({
+            x: this.x,
+            y: this.y,
+            scale: Math.max(1, this.scale - 1),
+            random: this.random,
+            sprite: this.art.feather,
+            pixelSize: this.art.feather ? this.art.pixelSize : 1,
+          }),
       ),
     )
   }
 
-  /** Index into `Chicken.sprite` for the current step. */
+  /** Index into its theme's sprite for the current step. */
   get frame() {
     if (this.panicking) return 4 + (Math.floor((this.panicAge * PANIC_FPS) / 60) % 2)
     return Math.floor((this.age * FLAP_FPS) / 60) % 4
@@ -118,6 +145,6 @@ export class Chicken extends Projectile {
 
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    Chicken.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, flip: this.flip, flash: this.flash })
+    this.art.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.art.pixelSize, flip: this.flip, flash: this.flash })
   }
 }

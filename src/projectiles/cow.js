@@ -3,7 +3,8 @@ import { Sprite } from '../sprite.js'
 import { Shard } from '../shard.js'
 import { Milk } from '../milk.js'
 import { inRange } from '../random.js'
-import { palette, floatFrames, mooFrames, bubbleFrames, steakFrames, HEAD, BUBBLE_WIDTH, BUBBLE_HEIGHT } from '../art/cow.js'
+import { pickTheme } from '../themes.js'
+import { palette, floatFrames, mooFrames, bubbleFrames, steakFrames, HEAD } from '../art/cow.js'
 
 /**
  * @typedef {object} CowOptions
@@ -18,7 +19,6 @@ import { palette, floatFrames, mooFrames, bubbleFrames, steakFrames, HEAD, BUBBL
 
 const LEG_FPS = 10
 const MOO_FPS = 12
-const steakSprite = Sprite.fromPixels(steakFrames, palette)
 
 /**
  * An original pixel-art cow that floats up from the bottom edge, legs kicking,
@@ -37,11 +37,22 @@ export class Cow extends Projectile {
     launchPoint: { min: 10, max: 90 },
   })
 
-  /** Frames 0-3 legs kicking, 4-5 excited (mouth open). Replace with your own art in the same layout. */
-  static sprite = Sprite.fromPixels([...floatFrames, ...mooFrames], palette)
-
-  /** Frame 0 with its tail on the left (for a bubble right of the head), 1 on the right. */
-  static bubble = Sprite.fromPixels(bubbleFrames, palette)
+  /**
+   * Art per theme (only retro so far, so every theme falls back to it). Frames 0-3 legs kicking,
+   * 4-5 excited (mouth open), facing right. `bubble`: frame 0 with its tail on the left (for a
+   * bubble right of the head), 1 on the right. `steaks`: the T-bones. `head`: where the head is,
+   * in sprite pixels, for placing the bubble.
+   * @type {Record<string, import('../themes.js').ThemeArt & {bubble: Sprite, steaks: Sprite, head: {x: number, y: number}}>}
+   */
+  static themes = {
+    retro: {
+      sprite: Sprite.fromPixels([...floatFrames, ...mooFrames], palette),
+      pixelSize: 1,
+      bubble: Sprite.fromPixels(bubbleFrames, palette),
+      steaks: Sprite.fromPixels(steakFrames, palette),
+      head: HEAD,
+    },
+  }
 
   /** @param {import('../projectile.js').ProjectileInit & CowOptions} init */
   constructor(init) {
@@ -51,6 +62,7 @@ export class Cow extends Projectile {
     const x = (init.size.width * inRange(r, init.launchPoint ?? d.launchPoint)) / 100
     super({ ...init, x })
     this.layer = /** @type {const} */ ('sprite')
+    this.art = pickTheme(Cow.themes, this.theme)
     this.scale = scale
     this.speed = init.speed ?? d.speed
     this.hoverSteps = init.hoverSteps ?? d.hoverSteps
@@ -58,7 +70,7 @@ export class Cow extends Projectile {
     this.steakCount = init.steaks ?? d.steaks
     this.milkCount = init.milk ?? d.milk
     this.startX = x
-    this.startY = init.y + (Cow.sprite.frameHeight * scale) / 2 // just below the bottom edge
+    this.startY = init.y + (this.art.sprite.frameHeight * this.art.pixelSize * scale) / 2 // just below the bottom edge
     this.moveTo(this.startX, this.startY)
     const distance = Math.hypot(init.target.x - this.startX, init.target.y - this.startY)
     /** steps to get there, slowing as it arrives */
@@ -116,12 +128,12 @@ export class Cow extends Projectile {
     engine.burst(this.x, this.y, this.hue, this.burst)
     const { x, y, random } = this
     engine.addParticles([
-      ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: steakSprite })),
+      ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: this.art.steaks, pixelSize: this.art.pixelSize })),
       ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random })),
     ])
   }
 
-  /** Index into `Cow.sprite` for the current step. */
+  /** Index into its theme's sprite for the current step. */
   get frame() {
     if (this.mooing) return 4 + (Math.floor((this.phaseAge * MOO_FPS) / 60) % 2)
     return Math.floor((this.age * LEG_FPS) / 60) % 4
@@ -133,12 +145,13 @@ export class Cow extends Projectile {
    * @returns {{x: number, y: number, frame: number, scale: number}} its centre, frame and scale
    */
   bubblePlace() {
-    const s = this.scale
+    const s = this.scale * this.art.pixelSize // CSS px per sprite pixel
     const pop = Math.min(1, 0.6 + 0.1 * this.phaseAge) // pops up over a few steps
-    const headX = this.x + (this.flip ? -1 : 1) * (HEAD.x + 0.5 - Cow.sprite.frameWidth / 2) * s
-    const headY = this.y + (HEAD.y + 0.5 - Cow.sprite.frameHeight / 2) * s
-    const w = BUBBLE_WIDTH * s
-    const h = BUBBLE_HEIGHT * s
+    const { sprite, head, bubble } = this.art
+    const headX = this.x + (this.flip ? -1 : 1) * (head.x + 0.5 - sprite.frameWidth / 2) * s
+    const headY = this.y + (head.y + 0.5 - sprite.frameHeight / 2) * s
+    const w = bubble.frameWidth * s
+    const h = bubble.frameHeight * s
     const reach = w / 2 - s // from the tail's tip to the bubble's centre
     let right = !this.flip
     if (right && headX + reach + w / 2 > this.size.width) right = false
@@ -150,10 +163,10 @@ export class Cow extends Projectile {
 
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    Cow.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, flip: this.flip })
+    this.art.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.art.pixelSize, flip: this.flip })
     if (this.mooing) {
       const b = this.bubblePlace()
-      Cow.bubble.draw(ctx, b.frame, b.x, b.y, { scale: b.scale })
+      this.art.bubble.draw(ctx, b.frame, b.x, b.y, { scale: b.scale })
     }
   }
 }

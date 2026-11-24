@@ -1,7 +1,8 @@
 import { Projectile } from '../projectile.js'
 import { Particle } from '../particle.js'
 import { Sprite } from '../sprite.js'
-import { Shard } from '../shard.js'
+import { Shard, jugShards } from '../shard.js'
+import { pickTheme } from '../themes.js'
 import { palette, frames } from '../art/jug.js'
 import { inRange } from '../random.js'
 
@@ -34,8 +35,14 @@ export class Jug extends Projectile {
     launchPoint: { min: 10, max: 90 },
   })
 
-  /** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
-  static sprite = Sprite.fromPixels(frames, palette)
+  /**
+   * Art per theme (only retro so far, so every theme falls back to it). Frames 0-2: the wick
+   * flame flickering, upright, wick at the top. `shards`: the stoneware pieces.
+   * @type {Record<string, import('../themes.js').ThemeArt & {shards: Sprite}>}
+   */
+  static themes = {
+    retro: { sprite: Sprite.fromPixels(frames, palette), pixelSize: 1, shards: jugShards },
+  }
 
   /** @param {import('../projectile.js').ProjectileInit & JugOptions} init */
   constructor(init) {
@@ -44,7 +51,9 @@ export class Jug extends Projectile {
     const r = init.random
     // Start at a random spot just below the bottom edge; the arc still peaks at the target.
     const x = (init.size.width * inRange(r, init.launchPoint ?? d.launchPoint)) / 100
-    super({ ...init, x, y: init.y + (Jug.sprite.frameHeight * scale) / 2 })
+    const art = pickTheme(Jug.themes, init.theme ?? init.options.theme)
+    super({ ...init, x, y: init.y + (art.sprite.frameHeight * art.pixelSize * scale) / 2 })
+    this.art = art
     this.layer = /** @type {const} */ ('sprite')
     this.scale = scale
     this.shardCount = init.shards ?? d.shards
@@ -92,17 +101,20 @@ export class Jug extends Projectile {
   explode(engine) {
     engine.burst(this.x, this.y, this.hue, this.burst, this.burstSize)
     engine.addParticles(
-      Array.from({ length: this.shardCount }, () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random })),
+      Array.from(
+        { length: this.shardCount },
+        () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random, sprite: this.art.shards, pixelSize: this.art.pixelSize }),
+      ),
     )
   }
 
-  /** Index into `Jug.sprite` for the current step. */
+  /** Index into its theme's sprite for the current step. */
   get frame() {
     return Math.floor((this.age * FLAME_FPS) / 60) % 3
   }
 
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    Jug.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, rotation: this.rotation })
+    this.art.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.art.pixelSize, rotation: this.rotation })
   }
 }

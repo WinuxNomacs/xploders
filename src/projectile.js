@@ -1,3 +1,5 @@
+import { DEFAULT_THEME } from './themes.js'
+
 /**
  * @typedef {object} ProjectileInit
  * @property {number} x launch point
@@ -8,6 +10,7 @@
  * @property {import('./options.js').Options} options the show's live options
  * @property {import('./random.js').Random} random the show's seeded generator
  * @property {import('./engine.js').Engine} [engine] the engine it flies in (`engine.calm` is true under reduced motion)
+ * @property {string} [theme] art theme for this one, overriding the show's `theme` option
  */
 
 /**
@@ -22,7 +25,7 @@ export class Projectile {
   static gravity = 0.15
 
   /** @param {ProjectileInit} init */
-  constructor({ x, y, target, size, hue, options, random, engine }) {
+  constructor({ x, y, target, size, hue, options, random, engine, theme }) {
     this.engine = engine
     this.x = x
     this.y = y
@@ -31,6 +34,8 @@ export class Projectile {
     /** @type {'trail' | 'sprite'} drawn with the fading fireworks, or crisp on top */
     this.layer = 'trail'
     this.hue = hue
+    /** the art theme it draws in: its own, else the show's */
+    this.theme = theme ?? options.theme ?? DEFAULT_THEME
     this.options = options
     this.random = random
     this.age = 0

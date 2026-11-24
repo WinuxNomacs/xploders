@@ -14,6 +14,7 @@ import { Shard } from './shard.js'
 import { Milk } from './milk.js'
 import { Flame, Glow, Smoke } from './fireball.js'
 import { Pointer } from './pointer.js'
+import { THEMES, DEFAULT_THEME, pickTheme } from './themes.js'
 
 export {
   Projectile,
@@ -32,6 +33,8 @@ export {
   Random,
   bursts,
   defaultOptions,
+  DEFAULT_THEME,
+  pickTheme,
   parsePixels,
 }
 
@@ -128,6 +131,9 @@ export class Xploders {
   static register(name, cls) {
     registry.set(name, cls)
   }
+
+  /** The built-in art themes, the default ('64bit') first. A character's `themes` may add more. */
+  static themes = THEMES
 
   /** Calm mode on or off, from the `reducedMotion` option and the visitor's setting. */
   syncMotion() {
