@@ -2,10 +2,12 @@
 // how long the show's work takes per frame and how often frames arrive.
 import { Xploders } from '../src/index.js'
 
-// `?quick` runs each scene briefly, for the browser tests; `?scene=4` runs only the fourth.
+// `?quick` runs each scene briefly, for the browser tests; `?scene=4` runs only the fourth;
+// `?trails=half` runs every scene with `trailResolution: 'half'`.
 const params = new URLSearchParams(location.search)
 const quick = params.has('quick')
 const only = Number(params.get('scene')) || 0
+const trailResolution = params.get('trails') === 'half' ? 'half' : 'full'
 const WARMUP_STEPS = quick ? 5 : 60
 const MEASURE_STEPS = quick ? 20 : 300 // 5 s at 60 steps a second
 
@@ -28,9 +30,14 @@ const scenes = [
     every: (show, step) => step % 20 === 0 && show.launch('jug'),
   },
   {
-    name: 'Cows (2 a second)',
+    // aimed a fixed height above the bottom, so they explode within the scene in a tall window too
+    name: 'Cows (2 a second, 250 px up)',
     options: { intensity: 0 },
-    every: (show, step) => step % 30 === 0 && show.launch('cow'),
+    every: (show, step) => {
+      if (step % 30 !== 0) return
+      const { width, height } = show.currentOptions.boundaries
+      show.launchAt(width * (0.15 + ((step / 30) % 8) * 0.1), Math.max(20, height - 250), 'cow')
+    },
   },
   {
     name: 'Saturn, shapes and animals (6 a second)',
@@ -63,7 +70,7 @@ const quantile = (values, q) => {
  */
 function runScene(scene) {
   return new Promise((resolve) => {
-    const show = new Xploders(sky, { seed: 1, ...scene.options })
+    const show = new Xploders(sky, { seed: 1, ...scene.options, trailResolution })
     const engine = show.engine
     let step = 0
     /** @type {number[]} */
@@ -128,9 +135,9 @@ runButton.addEventListener('click', async () => {
   const lines = [
     `xploders bench, ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
     `${navigator.userAgent}`,
-    `window ${innerWidth}x${innerHeight}, devicePixelRatio ${devicePixelRatio}`,
+    `window ${innerWidth}x${innerHeight}, devicePixelRatio ${devicePixelRatio}, trails ${trailResolution}`,
     '',
-    'work ms/frame: avg, p95 | frames/s | frames slower than 20 ms | most particles | scene',
+    'JS ms/frame (the browser may finish drawing later): avg, p95 | frames/s | frames slower than 20 ms | most particles | scene',
   ]
   for (const [i, scene] of scenes.entries()) {
     if (only && i + 1 !== only) continue

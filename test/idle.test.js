@@ -136,3 +136,51 @@ describe('Drawing only what can be seen', () => {
     await expect(done).resolves.toBeUndefined()
   })
 })
+
+describe('Half-resolution trails', () => {
+  /** @param {number} dpr @param {Record<string, any>} [options] */
+  function at(dpr, options = {}) {
+    vi.stubGlobal('devicePixelRatio', dpr)
+    const { show, engine, scheduler, canvas } = makeShow(options)
+    return { show, engine, canvas, trail: scheduler.layers[0] }
+  }
+
+  it('draws the trail layer at full resolution by default', () => {
+    const { canvas, trail, show } = at(2)
+    expect(show.currentOptions.trailResolution).toBe('full')
+    expect([canvas.width, canvas.height]).toEqual([1600, 1200])
+    expect([trail.width, trail.height]).toEqual([1600, 1200])
+  })
+
+  it("draws it at half the device pixel ratio with 'half', never below one pixel per CSS px, the visible canvas unchanged", () => {
+    for (const [dpr, ratio] of [
+      [2, 1],
+      [3, 1.5],
+      [1.5, 1],
+      [1, 1],
+    ]) {
+      const { canvas, trail, engine } = at(dpr, { trailResolution: 'half' })
+      expect(engine.trailDpr).toBe(ratio)
+      expect([trail.width, trail.height]).toEqual([800 * ratio, 600 * ratio])
+      expect([canvas.width, canvas.height]).toEqual([800 * dpr, 600 * dpr])
+    }
+  })
+
+  it('scales the trail layer up to the whole canvas, smoothly', () => {
+    const { canvas, trail, engine } = at(2, { trailResolution: 'half' })
+    /** @type {any[][]} */
+    const copies = []
+    canvas.ctx.drawImage = (...a) => copies.push(a)
+    engine.draw(1)
+    expect(copies[0]).toEqual([trail, 0, 0, 1600, 1200])
+    expect(canvas.ctx.imageSmoothingEnabled).toBe(true)
+  })
+
+  it('switches at runtime through updateOptions', () => {
+    const { show, trail } = at(2)
+    show.updateOptions({ trailResolution: 'half' })
+    expect(trail.width).toBe(800)
+    show.updateOptions({ trailResolution: 'full' })
+    expect(trail.width).toBe(1600)
+  })
+})

@@ -78,6 +78,8 @@ export class Engine {
     this.particles = []
     this.width = 0
     this.height = 0
+    /** the trail layer's pixels per CSS px (see resize) */
+    this.trailDpr = 1
     this.running = false
     this.autoLaunch = false
     /** auto-launch clock and the value it must pass, as fireworks-js's `tick` and `delay` */
@@ -109,13 +111,15 @@ export class Engine {
     const dpr = globalThis.devicePixelRatio || 1
     this.width = Math.max(0, width)
     this.height = Math.max(0, height)
-    for (const [c, ctx] of /** @type {const} */ ([
-      [this.canvas, this.ctx],
-      [this.trail, this.trailCtx],
+    /** the trail layer's pixels per CSS px: half the screen's with `trailResolution: 'half'`, at least 1 */
+    this.trailDpr = this.options.trailResolution === 'half' ? Math.min(dpr, Math.max(1, dpr / 2)) : dpr
+    for (const [c, ctx, ratio] of /** @type {const} */ ([
+      [this.canvas, this.ctx, dpr],
+      [this.trail, this.trailCtx, this.trailDpr],
     ])) {
-      c.width = Math.round(this.width * dpr)
-      c.height = Math.round(this.height * dpr)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      c.width = Math.round(this.width * ratio)
+      c.height = Math.round(this.height * ratio)
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
     }
     this.options.boundaries.width = this.width
     this.options.boundaries.height = this.height
@@ -350,7 +354,9 @@ export class Engine {
     ctx.save()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-    ctx.drawImage(this.trail, 0, 0)
+    // scaled up when the trail layer is at a lower resolution, smoothly
+    ctx.imageSmoothingEnabled = true
+    ctx.drawImage(this.trail, 0, 0, this.canvas.width, this.canvas.height)
     ctx.restore()
     this.drewDebug = o.boundaries.debug
     if (o.boundaries.debug) {

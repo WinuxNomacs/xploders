@@ -250,7 +250,9 @@ export class Xploders {
 
   /** @param {XplodersOptions} options merged into the live options */
   updateOptions(options) {
+    const trailResolution = this.options.trailResolution
     deepMerge(this.options, options)
+    if (this.options.trailResolution !== trailResolution) this.engine.resize(this.engine.width, this.engine.height)
     this.pointer.sync()
     this.syncMotion()
     return this
