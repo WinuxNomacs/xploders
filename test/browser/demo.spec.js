@@ -323,6 +323,29 @@ test('the built site runs from a static host without errors', async ({ page }) =
   expect(errors).toEqual([])
 })
 
+test('the bench page on the built site runs every scene and reports it', async ({ page }) => {
+  const { readFile } = await import('node:fs/promises')
+  const types = { html: 'text/html', js: 'text/javascript', mjs: 'text/javascript' }
+  await page.route('http://site.test/**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    try {
+      await route.fulfill({ body: await readFile(`site${path}`), contentType: types[path.split('.').pop()] ?? 'application/octet-stream' })
+    } catch {
+      await route.fulfill({ status: 404, body: 'not found' })
+    }
+  })
+  const errors = collectErrors(page)
+  await page.goto('http://site.test/bench.html?quick')
+  await page.getByRole('button', { name: 'Run' }).click()
+  await expect(page.locator('#status')).toHaveText('Done.', { timeout: 30000 })
+  const scenes = await page.evaluate(() => window.benchScenes.length)
+  const lines = (await page.locator('#out').textContent()).split('\n').filter((l) => / \| /.test(l) && !l.startsWith('work'))
+  expect(lines).toHaveLength(scenes)
+  expect(await page.getByRole('button', { name: 'Copy results' }).isEnabled()).toBe(true)
+  expect(await page.locator('canvas').count()).toBe(0) // each scene's canvas is removed after it
+  expect(errors).toEqual([])
+})
+
 test('both builds keep the class names', async ({ page }) => {
   await page.goto('/demo/')
   await page.addScriptTag({ url: '/dist/xploders.min.js' })
