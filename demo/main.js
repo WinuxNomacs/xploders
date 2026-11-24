@@ -1,7 +1,7 @@
 import { Xploders } from '../src/index.js'
 
 const sky = /** @type {HTMLElement} */ (document.getElementById('sky'))
-const show = new Xploders(sky).start()
+const show = new Xploders(sky, { intensity: 15 }).start()
 
 /** @param {string} id */
 const el = (id) => /** @type {HTMLInputElement} */ (document.getElementById(id))
@@ -13,16 +13,33 @@ el('auto').addEventListener('click', () => {
   el('auto').setAttribute('aria-pressed', String(on))
   el('auto').textContent = `Auto: ${on ? 'on' : 'off'}`
 })
-el('fireworks').addEventListener('click', () => show.launch(5))
-el('chicken').addEventListener('click', () => show.launch('chicken', 1, { flight: el('flight').value }))
-el('jug').addEventListener('click', () => show.launch('jug'))
-el('clear').addEventListener('click', () => show.clear())
-el('pointer').addEventListener('click', () => {
-  const on = el('pointer').getAttribute('aria-pressed') !== 'true'
-  show.updateOptions({ mouse: { click: on, move: on, max: 3 } })
-  el('pointer').setAttribute('aria-pressed', String(on))
-  el('pointer').textContent = `Pointer: ${on ? 'on' : 'off'}`
+
+// Each launch button launches and selects its type; a click on the sky fires one of the selected type there.
+/** @type {Record<string, {type: string, init?: () => object, count: number}>} */
+const types = {
+  fireworks: { type: 'rocket', count: 5 },
+  chicken: { type: 'chicken', init: () => ({ flight: el('flight').value }), count: 1 },
+  jug: { type: 'jug', count: 1 },
+}
+let selected = 'fireworks'
+const select = (/** @type {string} */ id) => {
+  selected = id
+  for (const other of Object.keys(types)) el(other).setAttribute('aria-pressed', String(other === id))
+}
+for (const [id, t] of Object.entries(types)) {
+  el(id).addEventListener('click', () => {
+    select(id)
+    show.launch(t.type, t.count, t.init?.())
+  })
+}
+select(selected)
+show.canvas.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return
+  const box = show.canvas.getBoundingClientRect()
+  const t = types[selected]
+  show.launchAt(e.clientX - box.left, e.clientY - box.top, t.type, t.init?.())
 })
+el('clear').addEventListener('click', () => show.clear())
 el('burst').addEventListener('change', () => {
   const v = el('burst').value
   show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle', 'fireball'] : /** @type {any} */ (v) })

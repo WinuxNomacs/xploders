@@ -138,10 +138,53 @@ test('a moving chicken leaves no ghost, while the same chicken on the trail laye
   expect(result.trail.sum).toBeGreaterThan(0)
 })
 
-test('with Pointer on, holding and dragging on the sky launches at the pointer; releasing over the panel ends it', async ({ page }) => {
+test('the demo starts at intensity 15, while the library default stays 30', async ({ page }) => {
+  await page.goto('/demo/')
+  expect(await page.locator('#intensity').inputValue()).toBe('15')
+  expect(await page.evaluate(() => window.show.options.intensity)).toBe(15)
+  expect(await page.evaluate(() => new window.Xploders(document.createElement('div')).options.intensity)).toBe(30)
+})
+
+test('a click on the sky fires the last selected type at that spot, fireworks by default', async ({ page }) => {
+  const errors = collectErrors(page)
   await page.goto('/demo/')
   await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
-  await page.getByRole('button', { name: 'Pointer: off' }).click()
+  expect(await page.locator('#fireworks').getAttribute('aria-pressed')).toBe('true')
+  expect(await page.getByRole('button', { name: /Pointer/ }).count()).toBe(0)
+  const last = () =>
+    page.evaluate(() => {
+      const p = window.show.engine.projectiles.at(-1)
+      return { type: p.constructor.name, target: p.target }
+    })
+  await page.mouse.click(400, 300)
+  expect(await count(page, 'projectiles')).toBe(1)
+  expect(await last()).toEqual({ type: 'Rocket', target: { x: 400, y: 300 } })
+
+  await page.getByRole('button', { name: 'Chicken' }).click()
+  expect(await page.locator('#chicken').getAttribute('aria-pressed')).toBe('true')
+  expect(await page.locator('#fireworks').getAttribute('aria-pressed')).toBe('false')
+  await page.mouse.click(500, 350)
+  expect((await last()).type).toBe('Chicken')
+  expect((await last()).target).toEqual({ x: 500, y: 350 })
+
+  await page.getByRole('button', { name: 'Jug-o-BOOM' }).click()
+  await page.mouse.click(600, 250)
+  expect(await last()).toEqual({ type: 'Jug', target: { x: 600, y: 250 } })
+
+  // Not blocked by a sky full of rockets, and clicks on the controls launch nothing.
+  await page.evaluate(() => window.show.launch(20))
+  const before = await count(page, 'projectiles')
+  await page.mouse.click(300, 400)
+  expect(await count(page, 'projectiles')).toBe(before + 1)
+  const n = await count(page, 'projectiles')
+  await page.locator('label', { hasText: 'Intensity' }).click()
+  expect(await count(page, 'projectiles')).toBe(n)
+  expect(errors).toEqual([])
+})
+
+test('the library pointer option still holds, drags and releases over the panel', async ({ page }) => {
+  await page.goto('/demo/')
+  await page.evaluate(() => window.show.updateOptions({ intensity: 0, mouse: { click: true, max: 3 } }).clear())
   await page.mouse.move(400, 300)
   await page.mouse.down()
   await expect.poll(() => count(page, 'projectiles')).toBeGreaterThan(0)
@@ -308,5 +351,12 @@ test.describe('the demo on a phone', () => {
     }))
     expect(r.top).toBeGreaterThan(r.controlsBottom)
     expect(r.controlsBottom).toBeLessThan(200) // compact enough to leave sky
+  })
+
+  test('a tap on the sky launches at the tap', async ({ page }) => {
+    await page.goto('/demo/')
+    await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
+    await page.touchscreen.tap(200, 450)
+    expect(await page.evaluate(() => window.show.engine.projectiles.map((p) => p.target))).toEqual([{ x: 200, y: 450 }])
   })
 })
