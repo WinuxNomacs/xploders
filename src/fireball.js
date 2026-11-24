@@ -61,6 +61,7 @@ const FLAME_STEPS = 24
  * @property {number} speed px/step
  * @property {number} radius px at the start
  * @property {number} life steps
+ * @property {number} [buoyancy] upward px/step^2, `Flame.BUOYANCY` by default
  */
 
 /**
@@ -72,13 +73,14 @@ export class Flame {
   static FRICTION = 0.9
 
   /** @param {FlameInit} init */
-  constructor({ x, y, angle, speed, radius, life }) {
+  constructor({ x, y, angle, speed, radius, life, buoyancy = Flame.BUOYANCY }) {
     this.x = x
     this.y = y
     this.vx = Math.cos(angle) * speed
     this.vy = Math.sin(angle) * speed
     this.radius0 = radius
     this.life = life
+    this.buoyancy = buoyancy
     this.age = 0
     this.dead = false
     /** @type {'trail'} */
@@ -109,7 +111,7 @@ export class Flame {
   /** @returns {boolean} never pops */
   update() {
     this.vx *= Flame.FRICTION
-    this.vy = this.vy * Flame.FRICTION - Flame.BUOYANCY
+    this.vy = this.vy * Flame.FRICTION - this.buoyancy
     this.x += this.vx
     this.y += this.vy
     this.age++
