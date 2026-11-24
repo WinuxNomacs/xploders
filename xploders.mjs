@@ -106,16 +106,16 @@ function inRange(random, { min, max }, integer = false) {
 __name(inRange, "inRange");
 
 // src/sprite.js
-function parsePixels(frames2, palette5) {
-  if (frames2.length === 0) throw new Error("xploders: a sprite needs at least one frame");
-  const frameHeight = frames2[0].length;
-  const frameWidth = frames2[0][0]?.length ?? 0;
+function parsePixels(frames3, palette6) {
+  if (frames3.length === 0) throw new Error("xploders: a sprite needs at least one frame");
+  const frameHeight = frames3[0].length;
+  const frameWidth = frames3[0][0]?.length ?? 0;
   if (frameWidth === 0) throw new Error("xploders: empty sprite frame");
-  const width = frameWidth * frames2.length;
+  const width = frameWidth * frames3.length;
   const data = new Uint8ClampedArray(width * frameHeight * 4);
   const colours = /* @__PURE__ */ new Map();
-  for (const [ch, css] of Object.entries(palette5)) colours.set(ch, css === null ? null : hexToRgb(css));
-  frames2.forEach((rows, f) => {
+  for (const [ch, css] of Object.entries(palette6)) colours.set(ch, css === null ? null : hexToRgb(css));
+  frames3.forEach((rows, f) => {
     if (rows.length !== frameHeight) throw new Error(`xploders: frame ${f} has ${rows.length} rows, expected ${frameHeight}`);
     rows.forEach((row, y) => {
       if (row.length !== frameWidth) {
@@ -134,7 +134,7 @@ function parsePixels(frames2, palette5) {
       }
     });
   });
-  return { frameWidth, frameHeight, frames: frames2.length, data };
+  return { frameWidth, frameHeight, frames: frames3.length, data };
 }
 __name(parsePixels, "parsePixels");
 function hexToRgb(css) {
@@ -168,12 +168,12 @@ var _Sprite = class _Sprite {
    * @param {number} opts.frames number of frames in the sheet
    * @param {number} [opts.fps]
    */
-  constructor(image, { frameWidth, frameHeight, frames: frames2, fps = 8 }) {
+  constructor(image, { frameWidth, frameHeight, frames: frames3, fps = 8 }) {
     this.image = image;
     this.flashImage = null;
     this.frameWidth = frameWidth;
     this.frameHeight = frameHeight;
-    this.frames = frames2;
+    this.frames = frames3;
     this.fps = fps;
     this.pixels = null;
   }
@@ -184,8 +184,8 @@ var _Sprite = class _Sprite {
    * @param {Record<string, string | null>} palette
    * @param {number} [fps]
    */
-  static fromPixels(frames2, palette5, fps = 8) {
-    const pixels = parsePixels(frames2, palette5);
+  static fromPixels(frames3, palette6, fps = 8) {
+    const pixels = parsePixels(frames3, palette6);
     const sprite = new _Sprite(null, { ...pixels, fps });
     sprite.pixels = pixels;
     return sprite;
@@ -193,8 +193,8 @@ var _Sprite = class _Sprite {
   /** Makes the sheet (and its flash silhouette) from pixels, once. */
   build() {
     if (this.image || !this.pixels) return;
-    const { frameWidth, frameHeight, frames: frames2, data } = this.pixels;
-    const w = frameWidth * frames2;
+    const { frameWidth, frameHeight, frames: frames3, data } = this.pixels;
+    const w = frameWidth * frames3;
     const sheet = createCanvas(w, frameHeight);
     const flash = createCanvas(w, frameHeight);
     const white = new Uint8ClampedArray(data);
@@ -235,7 +235,9 @@ var _Sprite = class _Sprite {
     const w = this.frameWidth * scale;
     const h = this.frameHeight * scale;
     ctx.save();
-    ctx.imageSmoothingEnabled = false;
+    const transform = typeof ctx.getTransform === "function" ? ctx.getTransform() : null;
+    const device = scale * (transform && transform.a > 0 ? transform.a : 1);
+    ctx.imageSmoothingEnabled = device < 0.999;
     ctx.globalAlpha = alpha;
     ctx.translate(Math.round(x), Math.round(y));
     if (rotation) ctx.rotate(rotation);
@@ -2371,8 +2373,8 @@ function paintJug() {
   return g;
 }
 __name(paintJug, "paintJug");
-function withFlame(jug2, flame) {
-  const g = jug2.map((row) => [...row]);
+function withFlame(jug3, flame) {
+  const g = jug3.map((row) => [...row]);
   const x0 = CENTER - 3;
   flame.forEach((line, y) => {
     for (let dx = 0; dx < line.length; dx++) if (line[dx] !== ".") g[y][x0 + dx] = line[dx];
@@ -2435,6 +2437,234 @@ __publicField(_Shard, "GRAVITY", 0.22);
 // px/step^2
 __publicField(_Shard, "FADE_STEPS", 30);
 var Shard = _Shard;
+
+// src/art/jug64.js
+var palette4 = {
+  ".": null,
+  k: "#1e1418",
+  // outline
+  g: "#ffe9cf",
+  // glaze glint
+  H: "#c97a42",
+  // glaze, light to dark
+  b: "#a35a2a",
+  B: "#7a3f1d",
+  d: "#4f2611",
+  D: "#2e1408",
+  h: "#fffaf0",
+  // cream stoneware, light to dark
+  c: "#efe2c0",
+  C: "#dccaa0",
+  s: "#c0aa80",
+  S: "#8f7a55",
+  u: "#3557b8",
+  // cobalt lettering and its shadow
+  U: "#1b2c66",
+  m: "#d22d20",
+  // red lettering and its shadow
+  M: "#7a140e",
+  n: "#c99a5c",
+  // cork, light to dark
+  N: "#9a7040",
+  P: "#6a4a26",
+  r: "#e6dfca",
+  // rag, light to dark
+  q: "#b0a68a",
+  Q: "#7e7560",
+  R: "#e8401c",
+  // flame, outside in
+  o: "#ff9a1f",
+  y: "#ffe36a",
+  w: "#fffbe8"
+};
+var WIDTH2 = 93;
+var HEIGHT2 = 120;
+var CENTER2 = 46;
+var K = 3;
+var CORK_ROW2 = 9 * K;
+var RETRO_HALF = [2, 2, 2, 3, 4, 6, 8, 10, 11, 12, 13, ...Array(16).fill(14), 13, 13, 12, 10];
+var GLAZE = "gHbBdD";
+var CREAM = "hcCsS";
+function halfWidth(y) {
+  const t = Math.min(RETRO_HALF.length - 1, Math.max(0, (y - CORK_ROW2 - 1) / K));
+  const i = Math.floor(t);
+  const f = t - i;
+  const a = RETRO_HALF[i];
+  const b = RETRO_HALF[Math.min(RETRO_HALF.length - 1, i + 1)];
+  return (a + (b - a) * f) * K + 1;
+}
+__name(halfWidth, "halfWidth");
+function glazeEnd(x) {
+  let drip = 0;
+  for (const rx of [4, 5, 11, 18, 19, 24]) drip = Math.max(drip, 4 * Math.exp(-(((x - (rx * K + 1)) / 2.2) ** 2)));
+  return 20 * K + Math.sin(x * 0.45) * 0.8 + drip;
+}
+__name(glazeEnd, "glazeEnd");
+function letter(g, text, ink, shadow, y0) {
+  const k = 2;
+  const width = [...text].reduce((w, ch) => w + (font[ch][0].length + 1) * k, -k);
+  for (
+    const [dx, dy, col] of
+    /** @type {[number, number, string][]} */
+    [
+      [1, 1, shadow],
+      [0, 0, ink]
+    ]
+  ) {
+    let x0 = CENTER2 - Math.floor(width / 2);
+    for (const ch of text) {
+      const glyph = font[ch];
+      glyph.forEach((line, gy) => {
+        for (let gx = 0; gx < line.length; gx++) {
+          if (line[gx] !== "#") continue;
+          for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) g.set(x0 + gx * k + i + dx, y0 + gy * k + j + dy, col);
+        }
+      });
+      x0 += (glyph[0].length + 1) * k;
+    }
+  }
+}
+__name(letter, "letter");
+function paintJug2() {
+  const g = new Grid(WIDTH2, HEIGHT2);
+  const handle = [
+    [3, 19],
+    [3, 23],
+    [4, 24.5],
+    [5, 25.6],
+    [6, 26.6],
+    [7, 27.5],
+    [8, 28],
+    [9.5, 28]
+  ].map(([dy, x]) => [x * K + 1, (9 + dy) * K + 1]);
+  for (let i = 0; i + 1 < handle.length; i++) {
+    const [x0, y0] = handle[i];
+    const [x1, y1] = handle[i + 1];
+    for (let w = -2; w <= 2; w++) g.line(x0 + w * 0.3, y0 + w, x1 + w * 0.3, y1 + w, w < 0 ? "H" : w > 1 ? "D" : "B");
+  }
+  const bodyTop = CORK_ROW2;
+  const bottom = HEIGHT2 - 2;
+  for (let y = bodyTop; y <= bottom; y++) {
+    const hw = halfWidth(y);
+    for (let x = Math.ceil(CENTER2 - hw); x <= Math.floor(CENTER2 + hw); x++) {
+      const nx = (x - CENTER2) / hw;
+      if (y < CORK_ROW2 + 3 * K) {
+        g.set(x, y, "nNP"[shade(nx, -0.3, 3)]);
+        continue;
+      }
+      if (y < CORK_ROW2 + 4 * K) {
+        g.set(x, y, "bBd"[shade(nx, 0, 3)]);
+        continue;
+      }
+      const ny = Math.max(-0.6, Math.min(0.85, (y - 88) / 34));
+      if (y < glazeEnd(x)) {
+        g.set(x, y, GLAZE[Math.max(1, shade(nx * 0.95, ny * 0.6 - 0.2, GLAZE.length, -0.35))]);
+      } else {
+        g.set(x, y, CREAM[shade(nx * 0.95, ny, CREAM.length)]);
+      }
+    }
+  }
+  for (let y = CORK_ROW2 + 5 * K; y < 57; y++) {
+    const x = Math.round(CENTER2 - halfWidth(y) * 0.52);
+    const end = y < CORK_ROW2 + 7 * K || y > 53;
+    g.set(x, y, end ? "H" : "g");
+    g.set(x + 1, y, "H");
+  }
+  letter(g, "JUG-O-", "u", "U", 23 * K - 1);
+  letter(g, "BOOM", "m", "M", 29 * K);
+  g.ellipse(CENTER2, CORK_ROW2 - 3, 5, 3, "rqQ");
+  g.ellipse(CENTER2 - 1, CORK_ROW2 - 7, 2.5, 3, "rqQ", { angle: 0.3 });
+  return g;
+}
+__name(paintJug2, "paintJug");
+function withFlame2(jug3, lean, grow) {
+  const g = jug3.copy();
+  const base = CORK_ROW2 - 8;
+  for (
+    const [scale, ch] of
+    /** @type {[number, string][]} */
+    [
+      [1, "R"],
+      [0.75, "o"],
+      [0.5, "y"],
+      [0.25, "w"]
+    ]
+  ) {
+    const h = 15 * grow * scale + 2;
+    const r = 5.5 * scale + 1;
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      const cx = CENTER2 + lean * 3 * t * t;
+      const cy = base - t * h + r * 0.4;
+      const rr = r * Math.sqrt(1 - t) * (1 - 0.15 * t);
+      g.ellipse(cx, cy, Math.max(0.6, rr), Math.max(0.6, rr * 0.9), ch);
+    }
+  }
+  return g.outline("k").rows();
+}
+__name(withFlame2, "withFlame");
+var jug2 = paintJug2();
+var frames2 = [withFlame2(jug2, 0, 1), withFlame2(jug2, -1, 0.92), withFlame2(jug2, 1, 0.96)];
+function shard(points, ramp) {
+  const g = new Grid(9, 9);
+  g.polygon(points, ramp);
+  return g.outline("k").rows();
+}
+__name(shard, "shard");
+var shardFrames2 = [
+  shard(
+    [
+      [1, 2],
+      [6, 1],
+      [7, 5],
+      [3, 7]
+    ],
+    "HbBd"
+  ),
+  shard(
+    [
+      [2, 1],
+      [7, 3],
+      [5, 7],
+      [1, 5]
+    ],
+    "bBdD"
+  ),
+  shard(
+    [
+      [1, 3],
+      [7, 2],
+      [4, 7]
+    ],
+    "HbB"
+  ),
+  shard(
+    [
+      [1, 2],
+      [6, 1],
+      [7, 6],
+      [2, 7]
+    ],
+    "hcCs"
+  ),
+  shard(
+    [
+      [2, 1],
+      [7, 4],
+      [3, 7],
+      [1, 4]
+    ],
+    "cCsS"
+  ),
+  shard(
+    [
+      [1, 1],
+      [7, 3],
+      [3, 7]
+    ],
+    "hcC"
+  )
+];
 
 // src/projectiles/jug.js
 var FLAME_FPS = 12;
@@ -2523,11 +2753,16 @@ __publicField(
   }
 );
 /**
- * Art per theme (only retro so far, so every theme falls back to it). Frames 0-2: the wick
- * flame flickering, upright, wick at the top. `shards`: the stoneware pieces.
+ * Art per theme. Frames 0-2: the wick flame flickering, upright, wick at the top. `shards`: the
+ * stoneware pieces. Replace a theme's art, or add a theme under a new name.
  * @type {Record<string, import('../themes.js').ThemeArt & {shards: Sprite}>}
  */
 __publicField(_Jug, "themes", {
+  "64bit": {
+    sprite: Sprite.fromPixels(frames2, palette4),
+    pixelSize: 1 / 3,
+    shards: Sprite.fromPixels(shardFrames2, palette4)
+  },
   retro: { sprite: Sprite.fromPixels(frames, palette3), pixelSize: 1, shards: jugShards }
 });
 var Jug = _Jug;
@@ -2588,7 +2823,7 @@ __publicField(_Milk, "FADE_STEPS", 20);
 var Milk = _Milk;
 
 // src/art/cow.js
-var palette4 = {
+var palette5 = {
   ".": null,
   k: "#2b1e24",
   // outline and spots
@@ -2616,8 +2851,8 @@ var palette4 = {
   b: "#f6f0e2"
   // bone
 };
-var WIDTH2 = 24;
-var HEIGHT2 = 16;
+var WIDTH3 = 24;
+var HEIGHT3 = 16;
 var body2 = [
   "........................",
   ".................h....h.",
@@ -2646,9 +2881,9 @@ var LEGS = [2, 6, 11, 15];
 function paintLegs(g, kick) {
   LEGS.forEach((x, i) => {
     const shift = [0, 0, kick[i] > 0 ? 1 : kick[i] < 0 ? -1 : 0, kick[i]];
-    for (let row = 12; row < HEIGHT2; row++) {
+    for (let row = 12; row < HEIGHT3; row++) {
       const dx = shift[row - 12];
-      const hoof = row === HEIGHT2 - 1;
+      const hoof = row === HEIGHT3 - 1;
       g[row][x + dx] = "k";
       g[row][x + dx + 1] = hoof ? "n" : "w";
       g[row][x + dx + 2] = "k";
@@ -2658,7 +2893,7 @@ function paintLegs(g, kick) {
 }
 __name(paintLegs, "paintLegs");
 function cow(kick, excited = false) {
-  const g = [...body2.map((row) => [...row]), ...Array.from({ length: HEIGHT2 - body2.length }, () => Array(WIDTH2).fill("."))];
+  const g = [...body2.map((row) => [...row]), ...Array.from({ length: HEIGHT3 - body2.length }, () => Array(WIDTH3).fill("."))];
   paintLegs(g, kick);
   if (excited) {
     for (const [x, y, line] of excitedHead) {
@@ -2844,10 +3079,10 @@ __publicField(
  */
 __publicField(_Cow, "themes", {
   retro: {
-    sprite: Sprite.fromPixels([...floatFrames, ...mooFrames], palette4),
+    sprite: Sprite.fromPixels([...floatFrames, ...mooFrames], palette5),
     pixelSize: 1,
-    bubble: Sprite.fromPixels(bubbleFrames, palette4),
-    steaks: Sprite.fromPixels(steakFrames, palette4),
+    bubble: Sprite.fromPixels(bubbleFrames, palette5),
+    steaks: Sprite.fromPixels(steakFrames, palette5),
     head: HEAD
   }
 });
