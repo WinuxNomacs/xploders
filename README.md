@@ -165,8 +165,9 @@ show.launch('chicken', 1, { theme: 'retro' }) // this one only
 
 Each character class lists its art per theme in `static themes` (for example `Chicken.themes['64bit']`); a character
 without art for a theme uses the default theme's, else whatever it has. Both looks are the same size on screen, so
-`scale` means the same in each. So far the chicken and the jug have 64-bit art; the cow uses its retro art in every
-theme until its own is drawn. `Xploders.themes` lists the built-in names. Detailed art shrunk below one screen pixel
+`scale` means the same in each. The chicken, jug and cow all have both looks, with their feathers, shards, T-bones,
+bubble and milk (64-bit milk gets a shine). `Xploders.themes` lists the built-in names. A subclass can bring its own
+`static themes`. Detailed art shrunk below one screen pixel
 per pixel (the 64-bit jug on a low-DPI screen) is drawn smoothed instead of dropping pixels.
 
 ### The chicken
@@ -256,9 +257,9 @@ The speech bubble sits above the head on the side the cow faces, and moves to th
 near an edge. Under reduced motion the cow doesn't bounce or shake; the bubble still shows. The milk has a faint
 blue-grey edge, so it shows on a white page too.
 
-To use your own art, replace `Cow.themes.retro.sprite` with a sprite of the same layout: frames 0-3 the legs kicking,
-4-5 excited, facing right. `Cow.themes.retro.bubble` is the speech bubble: frame 0 with its tail on the left, 1 on the
-right.
+To use your own art, replace `Cow.themes.retro.sprite` (or the `'64bit'` one, with `pixelSize: 1/3`) with a sprite of
+the same layout: frames 0-3 the legs kicking, 4-5 excited, facing right. A theme's `bubble` is the speech bubble:
+frame 0 with its tail on the left, 1 on the right; `head` says where the head is in the sprite, for placing it.
 
 ### Pixel sprites
 

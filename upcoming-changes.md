@@ -2,10 +2,16 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. The 64-bit cow (details below)
+- **Up next:** nothing planned; new requests go in `new.md`
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **The 64-bit cow** (2026-11-24, branch `phase-14/cow64`): 72x48 art (kicking and excited frames), a rounded,
+  shaded MOO! bubble at 69x36 and 27x21 T-bones with a fat rim and grill marks (`src/art/cow64.js`), shiny milk
+  (`glint` in `src/milk.js`), as `Cow.themes['64bit']`. Characters now read their own class's `themes` (`new.target`),
+  so a subclass can bring its own. Tests in `test/themes.test.js`. Seen mooing and exploding beside the retro cow at
+  DPR 1.5, on the dark demo and a white page. This completes the themes request.
 
 - **The 64-bit Jug-o-BOOM** (2026-11-24, branch `phase-13/jug64`): 93x120 art with the retro jug's outline scaled up
   smoothly, a dark glossy glaze with a glint and drips, cream stoneware shaded as a round body, lettering at twice
@@ -428,7 +434,7 @@ idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same with
   particle per frame.
 - Fewer per-frame array allocations in `drawLayer`.
 
-## Themes: 64-bit art by default, Retro kept (phase 1 done; 2-3 below)
+## Themes: 64-bit art by default, Retro kept (done)
 
 Request (`new.md`, 2026-11-24): "Give the pixelated characters (e.g. chickens, cows, jugs) a 64bit option with a more
 refined 64bit side scroller video game rendered appearance as their default theme. Keep the current appearance that
@@ -462,8 +468,7 @@ steaks through `Shard`'s `sprite`, milk drawn as shapes); `Sprite.fromPixels` an
 - 64-bit art painted procedurally into grids, as the jug is (shapes, shading ramps, highlights), so it stays
   original and editable; each frame layout matches retro's (flap, panic; wick; kick, excited).
 - Phases: the theme model, the option and override, the demo menu, and the 64-bit chicken with its feathers (done);
-  the 64-bit jug with its shards and wick flame (done); 1. the 64-bit cow with its bubble, steaks and milk (paint
-  with `src/art/paint.js`, add a `'64bit'` entry to `Cow.themes`).
+  the 64-bit jug with its shards and wick flame (done); the 64-bit cow with its bubble, steaks and milk (done).
 - Tests per phase: theme resolution (option, override, fallback), the same on-screen size in both themes, art grids
   well formed, the demo menu switching live; each new character looked at frame by frame in a real browser beside
   its retro version.

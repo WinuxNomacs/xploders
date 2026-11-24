@@ -57,7 +57,7 @@ export class Jug extends Projectile {
     const r = init.random
     // Start at a random spot just below the bottom edge; the arc still peaks at the target.
     const x = (init.size.width * inRange(r, init.launchPoint ?? d.launchPoint)) / 100
-    const art = pickTheme(Jug.themes, init.theme ?? init.options.theme)
+    const art = pickTheme(new.target.themes, init.theme ?? init.options.theme) // a subclass's own themes, if it has them
     super({ ...init, x, y: init.y + (art.sprite.frameHeight * art.pixelSize * scale) / 2 })
     this.art = art
     this.layer = /** @type {const} */ ('sprite')
