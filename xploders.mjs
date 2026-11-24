@@ -272,9 +272,49 @@ function drawDot(ctx, dot, x, y, r, alpha) {
 }
 __name(drawDot, "drawDot");
 var FLAME_STEPS = 24;
+var BLUE_LEVELS = 4;
+var COOLING = (
+  /** @type {[number, [number, number, number]][]} */
+  [
+    [0, [255, 245, 200]],
+    // white-yellow
+    [0.15, [255, 185, 50]],
+    // bright orange-yellow
+    [0.55, [235, 90, 20]],
+    // orange-red
+    [1, [140, 25, 5]]
+    // deep red
+  ]
+);
+var BLUE_WHITE = (
+  /** @type {[number, number, number]} */
+  [185, 210, 255]
+);
+function flameColour(t, hold) {
+  const keys = (
+    /** @type {[number, [number, number, number]][]} */
+    [
+      [0, BLUE_WHITE],
+      ...COOLING.map(([at, c]) => (
+        /** @type {[number, [number, number, number]]} */
+        [hold + at * (1 - hold), c]
+      ))
+    ]
+  );
+  let i = 1;
+  while (i < keys.length - 1 && t > keys[i][0]) i++;
+  const [a, ca] = keys[i - 1];
+  const [b, cb] = keys[i];
+  const f = b > a ? Math.min(1, Math.max(0, (t - a) / (b - a))) : 1;
+  return (
+    /** @type {[number, number, number]} */
+    ca.map((v, k) => Math.round(v + (cb[k] - v) * f))
+  );
+}
+__name(flameColour, "flameColour");
 var _Flame = class _Flame {
   /** @param {FlameInit} init */
-  constructor({ x, y, angle, speed, radius, life, buoyancy = _Flame.BUOYANCY }) {
+  constructor({ x, y, angle, speed, radius, life, buoyancy = _Flame.BUOYANCY, blue = 0 }) {
     this.x = x;
     this.y = y;
     this.vx = Math.cos(angle) * speed;
@@ -282,6 +322,7 @@ var _Flame = class _Flame {
     this.radius0 = radius;
     this.life = life;
     this.buoyancy = buoyancy;
+    this.hold = 0.06 + 0.24 * (Math.round(Math.min(1, Math.max(0, blue)) * (BLUE_LEVELS - 1)) / (BLUE_LEVELS - 1));
     this.age = 0;
     this.dead = false;
     this.layer = "trail";
@@ -290,22 +331,20 @@ var _Flame = class _Flame {
   get t() {
     return Math.min(1, this.age / this.life);
   }
-  get hue() {
-    return 55 * (1 - this.t);
-  }
-  get lightness() {
-    return 92 - 50 * this.t;
+  /** @returns {[number, number, number]} red, green, blue now */
+  get colour() {
+    return flameColour(this.t, this.hold);
   }
   get radius() {
     return this.radius0 * (0.6 + 0.9 * this.t);
   }
   get alpha() {
-    return (1 - this.t) ** 1.5;
+    return _Flame.MAX_ALPHA * (1 - this.t) ** 1.5;
   }
   /** @returns {boolean} never pops */
   update() {
     this.vx *= _Flame.FRICTION;
-    this.vy = this.vy * _Flame.FRICTION - this.buoyancy;
+    this.vy = this.vy * _Flame.FRICTION - this.buoyancy * Math.min(1, this.age / _Flame.RISE_AFTER);
     this.x += this.vx;
     this.y += this.vy;
     this.age++;
@@ -315,11 +354,10 @@ var _Flame = class _Flame {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const step = Math.min(FLAME_STEPS - 1, Math.floor(this.t * FLAME_STEPS));
-    const t = step / (FLAME_STEPS - 1);
-    const colour = `${Math.round(55 * (1 - t))}, 100%, ${Math.round(92 - 50 * t)}%`;
-    const dot = softDot(`flame${step}`, [
-      [0, `hsla(${colour}, 1)`],
-      [1, `hsla(${colour}, 0)`]
+    const colour = flameColour(step / (FLAME_STEPS - 1), this.hold).join(", ");
+    const dot = softDot(`flame${colour}`, [
+      [0, `rgba(${colour}, 1)`],
+      [1, `rgba(${colour}, 0)`]
     ]);
     drawDot(ctx, dot, this.x, this.y, this.radius, this.alpha);
   }
@@ -328,7 +366,94 @@ __name(_Flame, "Flame");
 __publicField(_Flame, "BUOYANCY", 0.06);
 // upward px/step^2
 __publicField(_Flame, "FRICTION", 0.9);
+/** Below 1 so the yellow shows where only a few flames overlap, not just white. */
+__publicField(_Flame, "MAX_ALPHA", 0.8);
+/** Steps before it rises at full buoyancy, so the blast stays round first. */
+__publicField(_Flame, "RISE_AFTER", 15);
 var Flame = _Flame;
+var _Flash = class _Flash {
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} radius px at its biggest
+   */
+  constructor(x, y, radius) {
+    this.x = x;
+    this.y = y;
+    this.maxRadius = radius;
+    this.age = 0;
+    this.dead = false;
+    this.layer = "trail";
+  }
+  get t() {
+    return Math.min(1, this.age / _Flash.LIFE);
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.age++;
+    if (this.age >= _Flash.LIFE) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const t = this.t;
+    const dot = softDot("flash", [
+      [0, "rgba(255, 255, 255, 1)"],
+      [0.35, "rgba(255, 255, 255, 0.9)"],
+      [1, "rgba(255, 255, 255, 0)"]
+    ]);
+    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (0.6 + 0.4 * t), (1 - t) ** 2);
+  }
+};
+__name(_Flash, "Flash");
+__publicField(_Flash, "LIFE", 9);
+var Flash = _Flash;
+var _Core = class _Core {
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} reach px it grows to, following the flames
+   * @param {number} radius px at the start
+   */
+  constructor(x, y, reach, radius) {
+    this.x = x;
+    this.y = y;
+    this.reach = reach;
+    this.radius0 = radius;
+    this.age = 0;
+    this.dead = false;
+    this.layer = "sprite";
+    this.behind = true;
+  }
+  get t() {
+    return Math.min(1, this.age / _Core.LIFE);
+  }
+  get alpha() {
+    return _Core.MAX_ALPHA * Math.min(1, this.age / 2) * (1 - this.t) ** 1.5;
+  }
+  get radius() {
+    return this.radius0 + this.reach * (1 - Flame.FRICTION ** this.age);
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.age++;
+    if (this.age >= _Core.LIFE) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const dot = softDot("core", [
+      [0, "rgba(120, 170, 255, 1)"],
+      [0.55, "rgba(70, 120, 255, 0.7)"],
+      [1, "rgba(50, 90, 255, 0)"]
+    ]);
+    drawDot(ctx, dot, this.x, this.y, this.radius, this.alpha);
+  }
+};
+__name(_Core, "Core");
+__publicField(_Core, "LIFE", 26);
+__publicField(_Core, "MAX_ALPHA", 0.75);
+var Core = _Core;
 var _Glow = class _Glow {
   /**
    * @param {number} x
@@ -410,6 +535,8 @@ __publicField(_Smoke, "MAX_ALPHA", 0.35);
 var Smoke = _Smoke;
 
 // src/bursts.js
+var GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+var FIREBALL_SPEED = 6;
 function particle({ x, y, hue, options: o, random: r, size = 1 }, overrides = {}) {
   const init = {
     x,
@@ -458,29 +585,34 @@ var bursts = {
   ), "willow"),
   // Flickers, then each particle pops into a few tiny sparks near the end.
   crackle: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })), "crackle"),
-  // A ball of fire: a glow, rising flames that cool from yellow to red, gold
-  // embers, then smoke as the flames die. Its own colours; the hue is unused.
-  // Under reduced motion there is no flash of light.
+  // A ball of fire: a white flash and a glow, then flames blasting out as a
+  // round ball (a sunflower spread fills the disc evenly; one shared friction
+  // keeps it round as it grows) around a blue heart; then they rise
+  // and cool to red, with gold embers, then smoke as the flames die. Its own
+  // colours; the hue is unused. Under reduced motion there is no flash of light.
   fireball: /* @__PURE__ */ __name((c) => {
     const r = c.random;
     const s = c.size ?? 1;
     const smoke = Math.floor(c.count * 0.15);
     const embers = Math.floor(c.count * 0.25);
-    const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 0 : 1));
+    const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 1 : 3));
+    const offset = r.range(0, Math.PI * 2);
     return [
-      ...c.calm ? [] : [new Glow(c.x, c.y, 120 * s)],
-      ...Array.from(
-        { length: flames },
-        () => new Flame({
-          x: c.x + r.range(-10, 10) * s,
-          y: c.y + r.range(-10, 10) * s,
-          angle: r.range(0, Math.PI * 2),
-          speed: r.range(1, 7) * s,
+      ...c.calm ? [] : [new Flash(c.x, c.y, 45 * s), new Glow(c.x, c.y, 120 * s)],
+      new Core(c.x, c.y, FIREBALL_SPEED * 10 * 0.6 * s, 20 * s),
+      ...Array.from({ length: flames }, (_, i) => {
+        const reach = Math.sqrt((i + 0.5) / flames);
+        return new Flame({
+          x: c.x + r.range(-4, 4) * s,
+          y: c.y + r.range(-4, 4) * s,
+          angle: offset + i * GOLDEN_ANGLE + r.range(-0.15, 0.15),
+          speed: FIREBALL_SPEED * reach * r.range(0.92, 1.08) * s,
           radius: r.range(14, 28) * s,
           life: r.int(45, 80),
-          buoyancy: Flame.BUOYANCY * s
-        })
-      ),
+          buoyancy: Flame.BUOYANCY * s,
+          blue: 1 - reach
+        });
+      }),
       ...Array.from(
         { length: embers },
         () => particle(c, {
@@ -1465,8 +1597,9 @@ var _Jug = class _Jug extends Projectile {
   constructor(init) {
     const d = _Jug.defaults;
     const scale = init.scale ?? d.scale;
-    super({ ...init, y: init.y + _Jug.sprite.frameHeight * scale / 2 });
     const r = init.random;
+    const x = init.size.width * inRange(r, init.launchPoint ?? d.launchPoint) / 100;
+    super({ ...init, x, y: init.y + _Jug.sprite.frameHeight * scale / 2 });
     this.layer = /** @type {const} */
     "sprite";
     this.scale = scale;
@@ -1533,7 +1666,8 @@ __publicField(
     scale: 2,
     spin: 0.05,
     shards: 12,
-    burstSize: 3
+    burstSize: 3,
+    launchPoint: { min: 10, max: 90 }
   }
 );
 /** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
