@@ -201,6 +201,76 @@ test('a click on the sky fires the last selected type at that spot, fireworks by
   expect(errors).toEqual([])
 })
 
+test('the boundaries editor: sliders while Boundaries is checked, and edges and corners drag without launching', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.setViewportSize({ width: 1000, height: 700 })
+  await page.goto('/demo/')
+  await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
+  const area = () => page.evaluate(() => window.show.targetArea)
+  await expect(page.locator('#b-left')).toBeHidden()
+  await page.getByLabel('Boundaries').check()
+  await expect(page.locator('#b-left')).toBeVisible()
+  expect(await page.evaluate(() => window.show.currentOptions.boundaries.debug)).toBe(true)
+
+  // The sliders show the box, and move its edges.
+  const before = await area()
+  expect(Number(await page.locator('#b-left').inputValue())).toBe(before.left)
+  await page.locator('#b-right').fill('100')
+  expect((await area()).right).toBe(900)
+  expect((await area()).left).toBe(before.left) // the right no longer follows the left
+  await page.locator('#b-bottom').fill('150')
+  expect((await area()).bottom).toBe(550)
+  expect(await page.locator('#b-bottom-value').textContent()).toBe('150')
+
+  // Dragging the bottom-right corner resizes the box and launches nothing.
+  const a = await area()
+  await page.mouse.move(a.right, a.bottom)
+  expect(await page.evaluate(() => window.show.canvas.style.cursor)).toBe('nwse-resize')
+  await page.mouse.down()
+  await page.mouse.move(a.right - 200, a.bottom - 100, { steps: 5 })
+  await page.mouse.up()
+  expect(await area()).toMatchObject({ right: a.right - 200, bottom: a.bottom - 100 })
+  expect(await count(page, 'projectiles')).toBe(0)
+  expect(Number(await page.locator('#b-right').inputValue())).toBe(1000 - (a.right - 200))
+
+  // A click inside the box still launches.
+  const c = await area()
+  await page.mouse.click((c.left + c.right) / 2, (c.top + c.bottom) / 2)
+  expect(await count(page, 'projectiles')).toBe(1)
+
+  // It can't be turned inside out.
+  await page.mouse.move(c.left, (c.top + c.bottom) / 2)
+  await page.mouse.down()
+  await page.mouse.move(c.right + 300, (c.top + c.bottom) / 2, { steps: 5 })
+  await page.mouse.up()
+  expect((await area()).right - (await area()).left).toBe(20)
+  expect(await count(page, 'projectiles')).toBe(1)
+
+  // Unchecked: sliders gone, and the edge is just sky again.
+  await page.getByLabel('Boundaries').uncheck()
+  await expect(page.locator('#b-left')).toBeHidden()
+  await page.mouse.click(c.right, c.bottom)
+  expect(await count(page, 'projectiles')).toBe(2)
+  expect(errors).toEqual([])
+})
+
+test('the box top follows the controls panel until it is set by hand', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 700 })
+  await page.goto('/demo/')
+  const top = () => page.evaluate(() => window.show.targetArea.top)
+  const panelBottom = () => page.evaluate(() => Math.round(document.querySelector('.controls').getBoundingClientRect().bottom))
+  expect(await top()).toBe((await panelBottom()) + 24)
+  await page.getByLabel('Boundaries').check() // the sliders make the panel taller, and the top follows
+  await expect.poll(top).toBe((await panelBottom()) + 24)
+  await page.locator('#b-top').fill('300')
+  expect(await top()).toBe(300)
+  const tall = await panelBottom()
+  await page.setViewportSize({ width: 420, height: 700 }) // the panel wraps taller
+  await expect.poll(panelBottom).toBeGreaterThan(tall)
+  await page.waitForTimeout(100)
+  expect(await top()).toBe(300)
+})
+
 test('the library pointer option still holds, drags and releases over the panel', async ({ page }) => {
   await page.goto('/demo/')
   await page.evaluate(() => window.show.updateOptions({ intensity: 0, mouse: { click: true, max: 3 } }).clear())

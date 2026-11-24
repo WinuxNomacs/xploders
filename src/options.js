@@ -7,6 +7,8 @@
  * @typedef {object} Boundaries
  * @property {number} x left/right margin for rocket targets, px
  * @property {number} y top margin for rocket targets, px
+ * @property {number | null} right right margin, px; null: twice `x`, as in fireworks-js (ours)
+ * @property {number | null} bottom bottom margin, px; null: half the height, as in fireworks-js (ours)
  * @property {number} width set from the canvas size on resize
  * @property {number} height set from the canvas size on resize
  * @property {boolean} debug draw the target box
@@ -72,7 +74,7 @@ export function defaultOptions() {
     lineWidth: { trace: { min: 1, max: 2 }, explosion: { min: 1, max: 3 } },
     lineStyle: 'round',
     opacity: 0.5,
-    boundaries: { x: 50, y: 50, width: 0, height: 0, debug: false },
+    boundaries: { x: 50, y: 50, right: null, bottom: null, width: 0, height: 0, debug: false },
     autoresize: true,
     burst: 'peony',
     maxParticles: 4000,

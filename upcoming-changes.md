@@ -2,11 +2,21 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Demo boundaries editor (details below)
-- **Then:** 2. Saturn and Shapes bursts; 3. Animals burst; 4. Performance review (after the planned updates)
+- **Up next:** 1. Saturn and Shapes bursts (details below)
+- **Then:** 2. Animals burst; 3. Performance review (after the planned updates)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Demo boundaries editor** (2026-11-24, branch `phase-8/boundaries-editor`): optional `right` and `bottom`
+  margins on `boundaries` (null keeps fireworks-js's box), one `targetArea()` for launch targets and the debug
+  outline (now with corner handles) (`src/engine.js`, `src/options.js`), a public `targetArea` getter
+  (`src/index.js`); demo sliders for the four margins while Boundaries is checked, edge and corner dragging with
+  resize cursors and `touch-action: none`, a 20 px minimum box, the top following the controls panel until set by
+  hand (`demo/main.js`, `demo/index.html`). Tests: `test/engine.test.js` (default box unchanged, four-margin box,
+  null back to default, outline and handles), browser tests for the sliders, dragging without launching, a click
+  inside still launching, and the top. Seen on desktop and a phone. A touch drag is covered only by the shared
+  hit-test (Playwright taps but doesn't drag by touch). Plan kept below.
 
 - **The exploding cow** (2026-11-24, branch `phase-7/cow`): original black-and-white cow, its "MOO!" bubble and
   grilled T-bones (`src/art/cow.js`), the font moved to `src/art/font.js` with variable-width glyphs (a 5-wide M,
@@ -210,7 +220,7 @@ steaks, and the demo's launch buttons and click to fire.
 - Browser: a cow's whole life in the demo without errors; the Cow button and click to fire with Cow picked.
 - Seen in a real browser frame by frame: the art, the bubble, the explosion on the dark demo and on a light page.
 
-## 1. Demo boundaries editor
+## Demo boundaries editor (done)
 
 Request (`new.md`, 2026-11-24): "In the demo, add sliders for resizing and moving the boundaries when Boundaries is
 checked/enabled. Also allow for the Boundaries box to be resized using the mouse on its corners and borders."
@@ -220,17 +230,32 @@ engine uses it today (`Engine.launch`, `src/engine.js`): left margin `x`, right 
 `y`, bottom fixed at half the canvas height; `width`/`height` are overwritten with the canvas size on every resize.
 The demo also moves `y` below the controls panel whenever the panel resizes.
 
-Proposed: with Boundaries checked, a panel of sliders (left, right, top, bottom) and drag handles on the box's
-corners and edges on the canvas; a drag on a handle doesn't launch (click to fire skips it).
+### Decisions (user, 2026-11-24)
 
-Open decisions (to ask when planning):
-- Library or demo only: the current fields can't express a free box (the right margin is tied to the left, the
-  bottom is fixed at 50%), so free sliders need new boundary fields in the library (for example `right` and
-  `bottom` margins, defaults keeping today's box) or the demo maps onto only `x` and `y`.
-- Whether the demo still moves the top below the controls panel once the user has set it by hand.
-- Moving the whole box by dragging its middle, or only resizing from corners and edges.
+- **New library settings:** `boundaries` gets optional `right` and `bottom` margins (px from the right and bottom
+  edges). Left out, the box is exactly today's (right margin `2x`, bottom at half the height), so fireworks-js
+  configs behave as before. The demo edits all four edges freely.
+- **Top edge: yours until reload.** Once the top is set by hand (slider or handle), the demo stops moving it below
+  the controls panel.
+- **Drag edges and corners only:** a click inside the box still launches.
+- **Sliders in the controls panel:** a row of four (Left, Right, Top, Bottom) under the Boundaries checkbox, shown
+  only while it is checked.
 
-## 2. Saturn and Shapes bursts
+### Design
+
+- Library (`src/engine.js`, `src/options.js`, `src/index.js`): one `targetArea()` computing the box (left, top,
+  right, bottom in CSS px) from the options, used by launch targets and the debug outline; a public `targetArea`
+  getter on `Xploders` so pages (the demo) can hit-test it. The debug outline gets small corner squares as handles.
+- Demo (`demo/main.js`, `demo/index.html`): sliders in px (max follows the canvas size), kept in step with the box;
+  on the canvas, with Boundaries checked, a press within a few px of an edge or corner (more on touch) drags it
+  (pointer capture, resize cursors on hover, `touch-action: none` while checked) instead of launching; the box can't
+  shrink below 20 px.
+- README: `right` and `bottom` in the options table, `targetArea`.
+- Tests: unit, default box unchanged and targets within a box set by all four margins, debug outline matches the
+  targets; browser, the sliders show only while checked and move the box, a drag on a corner resizes it without
+  launching, a click inside still launches, the top stops following the panel once set by hand.
+
+## 1. Saturn and Shapes bursts
 
 Requests (`new.md`, 2026-11-24): "Add a burst type called Saturn that explodes a spehere of one color inside
 exploding rings of another color"; "Add a burst type called Shapes that explodes fireworks in random shapes,
@@ -248,12 +273,12 @@ Open decisions (to ask when planning):
 - Saturn: how the second colour is chosen (opposite on the colour wheel, or random), and one ring or several.
 - Shapes: which shapes are in the set, and whether they are flat outlines or filled.
 
-## 3. Animals burst
+## 2. Animals burst
 
 Request (`new.md`, 2026-11-24): "Add a burst type called Animals that explodes fireworks in the shapes of random zoo
 animals".
 
-Builds on: the Shapes burst (phase 2), whose outline-to-particles code it reuses with animal outlines.
+Builds on: the Shapes burst (phase 1), whose outline-to-particles code it reuses with animal outlines.
 
 Proposed: `'animals'`, outlines drawn by us as point lists (original art, per the repo rules), one picked at random
 per burst; in the Burst menu.
@@ -261,7 +286,7 @@ per burst; in the Burst menu.
 Open decisions (to ask when planning): which animals (for example elephant, giraffe, lion, monkey, penguin), and
 whether an outline faces a random way.
 
-## 4. Performance review
+## 3. Performance review
 
 Request (`new.md`, 2026-11-24): "Once the current planned updates are complete. Plan a performance review to improve
 rendering performance and reduce unnecessary cpu/gpu impact."
@@ -270,7 +295,7 @@ Builds on: the measurements so far (in Done): step + draw per particle count, th
 cost (large additive soft dots are fill-rate bound: 10 jug fireballs about 76 ms per frame in headless Chromium at
 DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src/engine.js`).
 
-Proposed, to plan once phases 1-3 are done: profile the demo in a real GPU-backed browser as well as headless
+Proposed, to plan once phases 1-2 are done: profile the demo in a real GPU-backed browser as well as headless
 (headless uses software rendering, so its numbers are pessimistic); measure where frame time goes (trail fade,
 additive flames, sprite draws, particle updates); candidates to weigh: idling the loop when the sky is empty and
 auto-launch is off, a lower-resolution trail layer at high DPR, capping fireball fill (fewer, cached bigger dots),

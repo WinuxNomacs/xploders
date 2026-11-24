@@ -264,6 +264,14 @@ export class Xploders {
     return this
   }
 
+  /**
+   * Where random targets go: the `boundaries` box, CSS px from the canvas's top left.
+   * @returns {{left: number, top: number, right: number, bottom: number}}
+   */
+  get targetArea() {
+    return this.engine.targetArea()
+  }
+
   /** @param {Partial<import('./options.js').Boundaries>} boundaries */
   updateBoundaries(boundaries) {
     deepMerge(this.options.boundaries, boundaries)
