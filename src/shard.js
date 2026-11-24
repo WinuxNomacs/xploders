@@ -1,7 +1,8 @@
 import { Sprite } from './sprite.js'
 import { palette, shardFrames } from './art/jug.js'
 
-const jugShards = Sprite.fromPixels(shardFrames, palette)
+/** The retro jug's stoneware shards. */
+export const jugShards = Sprite.fromPixels(shardFrames, palette)
 
 /**
  * @typedef {object} ShardInit
@@ -10,6 +11,7 @@ const jugShards = Sprite.fromPixels(shardFrames, palette)
  * @property {number} scale CSS px per sprite pixel
  * @property {import('./random.js').Random} random
  * @property {Sprite} [sprite] its pictures, one picked at random; stoneware shards by default
+ * @property {number} [pixelSize] retro pixels per sprite pixel, as in a theme
  */
 
 /**
@@ -22,7 +24,7 @@ export class Shard {
   static FADE_STEPS = 30
 
   /** @param {ShardInit} init */
-  constructor({ x, y, scale, random: r, sprite = jugShards }) {
+  constructor({ x, y, scale, random: r, sprite = jugShards, pixelSize = 1 }) {
     const angle = r.range(0, Math.PI * 2)
     const speed = r.range(2, 7)
     this.x = x
@@ -31,6 +33,7 @@ export class Shard {
     this.vy = Math.sin(angle) * speed - 2.5 // thrown upward a little
     this.scale = scale
     this.sprite = sprite
+    this.pixelSize = pixelSize
     this.frame = r.int(0, sprite.frames - 1)
     this.rotation = r.range(0, Math.PI * 2)
     this.spin = r.range(-0.3, 0.3) // rad/step
@@ -56,6 +59,6 @@ export class Shard {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const alpha = Math.min(1, (this.life - this.age) / Shard.FADE_STEPS)
-    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation })
+    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.pixelSize, alpha, rotation: this.rotation })
   }
 }

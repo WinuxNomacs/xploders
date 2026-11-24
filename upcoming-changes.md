@@ -2,11 +2,20 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Themes: the theme model and the 64-bit chicken (details below)
-- **Then:** 2. The 64-bit Jug-o-BOOM; 3. The 64-bit cow
+- **Up next:** 1. The 64-bit Jug-o-BOOM (details below)
+- **Then:** 2. The 64-bit cow
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Themes: the model and the 64-bit chicken** (2026-11-24, branch `phase-12/themes-chicken`): `src/themes.js`
+  (`DEFAULT_THEME`, `THEMES`, `pickTheme` with its fallback), the `theme` option and per-launch `theme`
+  (`src/options.js`, `src/projectile.js`), `static themes` with `pixelSize` on the chicken, jug and cow (jug and
+  cow retro only for now), feathers and shards taking a theme's sprite and pixel size; a painter for detailed art
+  (`src/art/paint.js`: lit, shaded ellipses and polygons, lines, outline), the 48x48 64-bit hen and its feathers
+  (`src/art/chicken64.js`); the demo's Theme menu. Tests: `test/themes.test.js` (picking and fallback, option,
+  override and live switch, same size on screen, 64-bit feathers, art grids), a browser test for the Theme menu.
+  Seen beside the retro hen at DPR 1.5 and 2.
 
 - **Wider, denser Saturn rings** (2026-11-24, branch `fix/saturn-rings`; request in `new.md`: "the rings need to be
   about 25% wider and denser"): the ring's launch speed 9 to 11.25 px/step (25% wider) and twice the sparks (about
@@ -413,7 +422,7 @@ idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same with
   particle per frame.
 - Fewer per-frame array allocations in `drawLayer`.
 
-## 1-3. Themes: 64-bit art by default, Retro kept
+## Themes: 64-bit art by default, Retro kept (phase 1 done; 2-3 below)
 
 Request (`new.md`, 2026-11-24): "Give the pixelated characters (e.g. chickens, cows, jugs) a 64bit option with a more
 refined 64bit side scroller video game rendered appearance as their default theme. Keep the current appearance that
@@ -446,8 +455,9 @@ steaks through `Shard`'s `sprite`, milk drawn as shapes); `Sprite.fromPixels` an
   theme).
 - 64-bit art painted procedurally into grids, as the jug is (shapes, shading ramps, highlights), so it stays
   original and editable; each frame layout matches retro's (flap, panic; wick; kick, excited).
-- Phases: 1. the theme model, the option and override, the demo menu, and the 64-bit chicken with its feathers;
-  2. the 64-bit jug with its shards and wick flame; 3. the 64-bit cow with its bubble, steaks and milk.
+- Phases: the theme model, the option and override, the demo menu, and the 64-bit chicken with its feathers (done);
+  1. the 64-bit jug with its shards and wick flame; 2. the 64-bit cow with its bubble, steaks and milk (paint them
+  with `src/art/paint.js`, add a `'64bit'` entry to `Jug.themes` / `Cow.themes`).
 - Tests per phase: theme resolution (option, override, fallback), the same on-screen size in both themes, art grids
   well formed, the demo menu switching live; each new character looked at frame by frame in a real browser beside
   its retro version.

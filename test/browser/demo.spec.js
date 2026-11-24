@@ -119,6 +119,26 @@ test('a cow floats up, Moo!s with its bubble, explodes into steaks, milk and spa
   expect(errors).toEqual([])
 })
 
+test('the Theme menu switches the characters between 64-bit and retro art', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/demo/')
+  await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
+  const art = () => page.evaluate(() => {
+    const p = window.show.engine.projectiles.at(-1)
+    const themes = window.show.engine.resolve('chicken').themes
+    return p.art === themes['64bit'] ? '64bit' : p.art === themes.retro ? 'retro' : 'other'
+  })
+  expect(await page.locator('#theme').inputValue()).toBe('64bit')
+  await page.getByRole('button', { name: 'Chicken' }).click()
+  expect(await art()).toBe('64bit')
+  await page.locator('#theme').selectOption('retro')
+  expect(await page.evaluate(() => window.show.currentOptions.theme)).toBe('retro')
+  await page.getByRole('button', { name: 'Chicken' }).click()
+  expect(await art()).toBe('retro')
+  await expect.poll(() => count(page, 'particles'), { timeout: 15000 }).toBeGreaterThan(0)
+  expect(errors).toEqual([])
+})
+
 test('a moving chicken leaves no ghost, while the same chicken on the trail layer would', async ({ page }) => {
   await page.goto('/demo/')
   const result = await page.evaluate(() => {

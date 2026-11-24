@@ -1,7 +1,7 @@
 import { Sprite } from './sprite.js'
 
-// Original pixel feather, three poses for the sway: tilted right, flat, tilted left.
-const sprite = Sprite.fromPixels(
+/** Original retro pixel feather, three poses for the sway: tilted right, flat, tilted left. */
+const retroFeathers = Sprite.fromPixels(
   [
     ['...w', '..wg', '.wg.', 'g...'],
     ['....', 'wwww', '.ggg', '....'],
@@ -16,6 +16,8 @@ const sprite = Sprite.fromPixels(
  * @property {number} y
  * @property {number} scale CSS px per sprite pixel
  * @property {import('./random.js').Random} random
+ * @property {Sprite} [sprite] its three poses (tilted right, flat, tilted left); the retro feather by default
+ * @property {number} [pixelSize] retro pixels per sprite pixel, as in a theme (1/3 for 64-bit art)
  */
 
 /**
@@ -28,7 +30,7 @@ export class Feather {
   static FADE_STEPS = 40
 
   /** @param {FeatherInit} init */
-  constructor({ x, y, scale, random: r }) {
+  constructor({ x, y, scale, random: r, sprite = retroFeathers, pixelSize = 1 }) {
     const angle = r.range(0, Math.PI * 2)
     const speed = r.range(2.5, 6)
     this.baseX = x
@@ -37,6 +39,8 @@ export class Feather {
     this.vx = Math.cos(angle) * speed
     this.vy = Math.sin(angle) * speed - 1.5 // puffs upward a little
     this.scale = scale
+    this.sprite = sprite
+    this.pixelSize = pixelSize
     this.swayAmp = r.range(6, 12)
     this.swayFreq = r.range(0.05, 0.08) // rad/step
     this.phase = r.range(0, Math.PI * 2)
@@ -68,6 +72,6 @@ export class Feather {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const alpha = Math.min(1, (this.life - this.age) / Feather.FADE_STEPS)
-    sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha })
+    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.pixelSize, alpha })
   }
 }

@@ -99,6 +99,7 @@ sky's trails have faded (it keeps stepping, so `waitStop` still resolves). Brows
 | `maxProjectiles` | `100`                                  | Cap on projectiles in flight; `launch()` beyond it launches fewer |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
 | `reducedMotion` | `'auto'`                                | `'auto'`, `'always'` or `'ignore'`, see below              |
+| `theme`      | `'64bit'`                                | Art for the chicken, jug and cow: `'64bit'` (detailed) or `'retro'`, see below |
 | `trailResolution` | `'full'`                              | `'half'` draws sparks, flames and glows at half the device pixel ratio (never below 1 pixel per CSS px); sprites stay crisp. Much faster with many sparks; can be slower with big sprites or fireballs (measured in Firefox: many sparks 48 to 139 fps, cows 165 to 112), so measure your own show with the bench |
 | `seed`         | random                                   | Seed for a repeatable show                                 |
 
@@ -151,6 +152,22 @@ When the visitor's system asks for reduced motion (`prefers-reduced-motion: redu
 no auto-launch, no flickering sparks, no chicken flash, no fireball flash, no shaking cow. `launch()`, `launchAt()` and pointer launch still work. It
 follows the setting live. `reducedMotion: 'always'` calms the show for everyone; `'ignore'` never calms it.
 
+### Themes
+
+The characters come in two looks: `'64bit'`, detailed pixel art with shading and highlights (the default), and
+`'retro'`, the original chunky pixel art. Set it for the show, change it live, or give one launch its own:
+
+```js
+const show = new Xploders(sky, { theme: 'retro' })
+show.updateOptions({ theme: '64bit' })
+show.launch('chicken', 1, { theme: 'retro' }) // this one only
+```
+
+Each character class lists its art per theme in `static themes` (for example `Chicken.themes['64bit']`); a character
+without art for a theme uses the default theme's, else whatever it has. Both looks are the same size on screen, so
+`scale` means the same in each. So far the chicken has 64-bit art; the jug and cow use their retro art in every
+theme until theirs is drawn. `Xploders.themes` lists the built-in names.
+
 ### The chicken
 
 An original pixel-art hen that flaps into the sky, panics at its target (frantic flapping, shaking, flashing), then
@@ -172,7 +189,8 @@ Chicken.defaults.panicSteps = 60 // change the default for every chicken
 | `panicSteps` | `30`       | Panic before the explosion, in 1/60 s steps               |
 | `feathers`   | `16`       | Feathers in the explosion (they count towards `maxParticles`) |
 
-To use your own art, replace `Chicken.sprite` with a sprite of the same layout: frames 0-3 flap (wings up, mid,
+To use your own art, replace a theme's sprite (`Chicken.themes.retro.sprite`, or `Chicken.themes['64bit'].sprite`
+with `pixelSize: 1/3` for art three times as detailed) with a sprite of the same layout: frames 0-3 flap (wings up, mid,
 down, mid), 4-5 panic, facing right.
 
 ### The Jug-o-BOOM
@@ -204,7 +222,7 @@ The `'fireball'` burst works for rockets too (`burst: 'fireball'`). It uses its 
 blue heart and grey smoke are drawn over the page, so they show on light and dark backgrounds. Under reduced motion
 it has no white flash or glow.
 
-To use your own art, replace `Jug.sprite` with a sprite of the same layout: frames 0-2 the wick flame flickering,
+To use your own art, replace `Jug.themes.retro.sprite` with a sprite of the same layout: frames 0-2 the wick flame flickering,
 upright, wick at the top.
 
 ### The cow
@@ -236,8 +254,9 @@ The speech bubble sits above the head on the side the cow faces, and moves to th
 near an edge. Under reduced motion the cow doesn't bounce or shake; the bubble still shows. The milk has a faint
 blue-grey edge, so it shows on a white page too.
 
-To use your own art, replace `Cow.sprite` with a sprite of the same layout: frames 0-3 the legs kicking, 4-5 excited,
-facing right. `Cow.bubble` is the speech bubble: frame 0 with its tail on the left, 1 on the right.
+To use your own art, replace `Cow.themes.retro.sprite` with a sprite of the same layout: frames 0-3 the legs kicking,
+4-5 excited, facing right. `Cow.themes.retro.bubble` is the speech bubble: frame 0 with its tail on the left, 1 on the
+right.
 
 ### Pixel sprites
 
