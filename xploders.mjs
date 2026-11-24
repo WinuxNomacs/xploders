@@ -274,13 +274,14 @@ __name(drawDot, "drawDot");
 var FLAME_STEPS = 24;
 var _Flame = class _Flame {
   /** @param {FlameInit} init */
-  constructor({ x, y, angle, speed, radius, life }) {
+  constructor({ x, y, angle, speed, radius, life, buoyancy = _Flame.BUOYANCY }) {
     this.x = x;
     this.y = y;
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
     this.radius0 = radius;
     this.life = life;
+    this.buoyancy = buoyancy;
     this.age = 0;
     this.dead = false;
     this.layer = "trail";
@@ -304,7 +305,7 @@ var _Flame = class _Flame {
   /** @returns {boolean} never pops */
   update() {
     this.vx *= _Flame.FRICTION;
-    this.vy = this.vy * _Flame.FRICTION - _Flame.BUOYANCY;
+    this.vy = this.vy * _Flame.FRICTION - this.buoyancy;
     this.x += this.vx;
     this.y += this.vy;
     this.age++;
@@ -409,8 +410,8 @@ __publicField(_Smoke, "MAX_ALPHA", 0.35);
 var Smoke = _Smoke;
 
 // src/bursts.js
-function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
-  return new Particle({
+function particle({ x, y, hue, options: o, random: r, size = 1 }, overrides = {}) {
+  const init = {
     x,
     y,
     angle: r.range(0, Math.PI * 2),
@@ -424,7 +425,8 @@ function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
     lineWidth: inRange(r, o.lineWidth.explosion),
     flicker: r.int(0, 100) <= o.flickering,
     ...overrides
-  });
+  };
+  return new Particle({ ...init, speed: init.speed * size });
 }
 __name(particle, "particle");
 var bursts = {
@@ -461,20 +463,22 @@ var bursts = {
   // Under reduced motion there is no flash of light.
   fireball: /* @__PURE__ */ __name((c) => {
     const r = c.random;
+    const s = c.size ?? 1;
     const smoke = Math.floor(c.count * 0.15);
     const embers = Math.floor(c.count * 0.25);
     const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 0 : 1));
     return [
-      ...c.calm ? [] : [new Glow(c.x, c.y, 120)],
+      ...c.calm ? [] : [new Glow(c.x, c.y, 120 * s)],
       ...Array.from(
         { length: flames },
         () => new Flame({
-          x: c.x + r.range(-10, 10),
-          y: c.y + r.range(-10, 10),
+          x: c.x + r.range(-10, 10) * s,
+          y: c.y + r.range(-10, 10) * s,
           angle: r.range(0, Math.PI * 2),
-          speed: r.range(1, 7),
-          radius: r.range(14, 28),
-          life: r.int(45, 80)
+          speed: r.range(1, 7) * s,
+          radius: r.range(14, 28) * s,
+          life: r.int(45, 80),
+          buoyancy: Flame.BUOYANCY * s
         })
       ),
       ...Array.from(
@@ -491,13 +495,13 @@ var bursts = {
       ...Array.from(
         { length: smoke },
         () => new Smoke({
-          x: c.x + r.range(-35, 35),
-          y: c.y + r.range(-30, 5),
+          x: c.x + r.range(-35, 35) * s,
+          y: c.y + r.range(-30, 5) * s,
           delay: r.int(25, 45),
           life: r.int(60, 90),
-          drift: r.range(-0.6, 0.6),
-          rise: r.range(0.4, 0.9),
-          radius: r.range(16, 26)
+          drift: r.range(-0.6, 0.6) * s,
+          rise: r.range(0.4, 0.9) * s,
+          radius: r.range(16, 26) * s
         })
       )
     ];
@@ -728,15 +732,16 @@ var _Engine = class _Engine {
    * @param {number} y
    * @param {number} hue
    * @param {import('./options.js').BurstStyle} [style] defaults to the `burst` option
+   * @param {number} [size] how far it spreads, 1 by default
    */
-  burst(x, y, hue, style) {
+  burst(x, y, hue, style, size = 1) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     const o = this.options;
     const choice = style ?? (Array.isArray(o.burst) ? this.random.pick(o.burst) : o.burst);
     const make = bursts[choice] ?? bursts.peony;
     const count = Math.min(Math.floor(o.particles), this.capacity());
     if (count <= 0) return;
-    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random, calm: this.calm }).slice(0, this.capacity()));
+    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random, calm: this.calm, size }).slice(0, this.capacity()));
   }
   /**
    * Adds particles of any kind (feathers...), as many as fit under `maxParticles`.
@@ -1467,6 +1472,7 @@ var _Jug = class _Jug extends Projectile {
     this.scale = scale;
     this.shardCount = init.shards ?? d.shards;
     this.burst = init.burst ?? "fireball";
+    this.burstSize = init.burstSize ?? d.burstSize;
     const direction = this.vx > 0 ? 1 : this.vx < 0 ? -1 : r.next() < 0.5 ? 1 : -1;
     this.spin = direction * (init.spin ?? d.spin) * r.range(0.7, 1.3);
     this.rotation = r.range(-0.3, 0.3);
@@ -1503,7 +1509,7 @@ var _Jug = class _Jug extends Projectile {
   }
   /** @param {import('../engine.js').Engine} engine */
   explode(engine) {
-    engine.burst(this.x, this.y, this.hue, this.burst);
+    engine.burst(this.x, this.y, this.hue, this.burst, this.burstSize);
     engine.addParticles(
       Array.from({ length: this.shardCount }, () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random }))
     );
@@ -1526,7 +1532,8 @@ __publicField(
   {
     scale: 2,
     spin: 0.05,
-    shards: 12
+    shards: 12,
+    burstSize: 3
   }
 );
 /** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
