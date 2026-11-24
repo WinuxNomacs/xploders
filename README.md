@@ -165,8 +165,9 @@ show.launch('chicken', 1, { theme: 'retro' }) // this one only
 
 Each character class lists its art per theme in `static themes` (for example `Chicken.themes['64bit']`); a character
 without art for a theme uses the default theme's, else whatever it has. Both looks are the same size on screen, so
-`scale` means the same in each. So far the chicken has 64-bit art; the jug and cow use their retro art in every
-theme until theirs is drawn. `Xploders.themes` lists the built-in names.
+`scale` means the same in each. So far the chicken and the jug have 64-bit art; the cow uses its retro art in every
+theme until its own is drawn. `Xploders.themes` lists the built-in names. Detailed art shrunk below one screen pixel
+per pixel (the 64-bit jug on a low-DPI screen) is drawn smoothed instead of dropping pixels.
 
 ### The chicken
 
@@ -222,7 +223,8 @@ The `'fireball'` burst works for rockets too (`burst: 'fireball'`). It uses its 
 blue heart and grey smoke are drawn over the page, so they show on light and dark backgrounds. Under reduced motion
 it has no white flash or glow.
 
-To use your own art, replace `Jug.themes.retro.sprite` with a sprite of the same layout: frames 0-2 the wick flame flickering,
+To use your own art, replace `Jug.themes.retro.sprite` (or the `'64bit'` one, with `pixelSize: 1/3`) with a sprite of
+the same layout: frames 0-2 the wick flame flickering,
 upright, wick at the top.
 
 ### The cow

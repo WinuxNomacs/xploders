@@ -158,7 +158,11 @@ export class Sprite {
     const w = this.frameWidth * scale
     const h = this.frameHeight * scale
     ctx.save()
-    ctx.imageSmoothingEnabled = false
+    // Crisp pixels, unless art is shrunk below one screen pixel per pixel (detailed art on a
+    // low-DPI screen), where dropping pixels would look jagged and smoothing looks right.
+    const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
+    const device = scale * (transform && transform.a > 0 ? transform.a : 1)
+    ctx.imageSmoothingEnabled = device < 0.999
     ctx.globalAlpha = alpha
     ctx.translate(Math.round(x), Math.round(y))
     if (rotation) ctx.rotate(rotation)

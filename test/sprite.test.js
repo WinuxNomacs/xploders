@@ -38,3 +38,26 @@ describe('chicken art', () => {
     expect(s.frameAt(0.26)).toBe(0)
   })
 })
+
+describe('Sprite smoothing', () => {
+  /** @param {number} a the context's scale (its devicePixelRatio) */
+  function ctxAt(a) {
+    const ctx = { getTransform: () => ({ a }), save() {}, restore() {}, translate() {}, rotate() {}, scale() {}, drawImage() {}, globalAlpha: 1, imageSmoothingEnabled: true }
+    return /** @type {any} */ (ctx)
+  }
+  const sprite = Sprite.fromPixels([['k']], { k: '#000000' })
+
+  it('keeps pixels crisp at one screen pixel per pixel or more, and smooths art shrunk below that', () => {
+    const cases = [
+      [1, 1, false], // a 64-bit chicken on a DPR 1 screen
+      [2 / 3, 1.5, false], // a 64-bit jug at DPR 1.5: exactly one screen pixel
+      [2 / 3, 1, true], // the same jug at DPR 1: shrunk
+      [3, 1, false], // retro art
+    ]
+    for (const [scale, dpr, smooth] of cases) {
+      const ctx = ctxAt(dpr)
+      sprite.draw(ctx, 0, 0, 0, { scale })
+      expect(ctx.imageSmoothingEnabled).toBe(smooth)
+    }
+  })
+})
