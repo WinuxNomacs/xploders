@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>xploders bench</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #05060f;
+        color: #eee;
+        font: 14px system-ui, sans-serif;
+        overflow: hidden;
+      }
+      #sky {
+        position: fixed;
+        inset: 0;
+      }
+      .panel {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        max-width: min(640px, calc(100% - 32px));
+        background: #151826e6;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 10px 12px;
+      }
+      .panel p {
+        margin: 0 0 8px;
+      }
+      button {
+        font: inherit;
+        padding: 6px 12px;
+        border: 1px solid #444;
+        border-radius: 6px;
+        background: #22263a;
+        color: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      pre {
+        margin: 8px 0 0;
+        max-height: 50vh;
+        overflow: auto;
+        background: #0b0d18;
+        padding: 8px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+      pre:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sky"></div>
+    <div class="panel">
+      <p>
+        Runs fixed scenes for a few seconds each and measures frame times. Keep this tab in front and the window still
+        while it runs (about 40 seconds), then copy the results.
+      </p>
+      <button id="run" type="button">Run</button>
+      <button id="copy" type="button" disabled>Copy results</button>
+      <span id="status"></span>
+      <pre id="out"></pre>
+    </div>
+    <script type="module" src="./bench.js"></script>
+  </body>
+</html>
