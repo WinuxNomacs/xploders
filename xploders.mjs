@@ -106,7 +106,7 @@ function inRange(random, { min, max }, integer = false) {
 __name(inRange, "inRange");
 
 // src/sprite.js
-function parsePixels(frames2, palette3) {
+function parsePixels(frames2, palette4) {
   if (frames2.length === 0) throw new Error("xploders: a sprite needs at least one frame");
   const frameHeight = frames2[0].length;
   const frameWidth = frames2[0][0]?.length ?? 0;
@@ -114,7 +114,7 @@ function parsePixels(frames2, palette3) {
   const width = frameWidth * frames2.length;
   const data = new Uint8ClampedArray(width * frameHeight * 4);
   const colours = /* @__PURE__ */ new Map();
-  for (const [ch, css] of Object.entries(palette3)) colours.set(ch, css === null ? null : hexToRgb(css));
+  for (const [ch, css] of Object.entries(palette4)) colours.set(ch, css === null ? null : hexToRgb(css));
   frames2.forEach((rows, f) => {
     if (rows.length !== frameHeight) throw new Error(`xploders: frame ${f} has ${rows.length} rows, expected ${frameHeight}`);
     rows.forEach((row, y) => {
@@ -184,11 +184,11 @@ var _Sprite = class _Sprite {
    * @param {Record<string, string | null>} palette
    * @param {number} [fps]
    */
-  static fromPixels(frames2, palette3, fps = 8) {
-    const pixels = parsePixels(frames2, palette3);
-    const sprite3 = new _Sprite(null, { ...pixels, fps });
-    sprite3.pixels = pixels;
-    return sprite3;
+  static fromPixels(frames2, palette4, fps = 8) {
+    const pixels = parsePixels(frames2, palette4);
+    const sprite2 = new _Sprite(null, { ...pixels, fps });
+    sprite2.pixels = pixels;
+    return sprite2;
   }
   /** Makes the sheet (and its flash silhouette) from pixels, once. */
   build() {
@@ -1401,6 +1401,33 @@ __publicField(
 __publicField(_Chicken, "sprite", Sprite.fromPixels([...flapFrames, ...panicFrames], palette));
 var Chicken = _Chicken;
 
+// src/art/font.js
+var font = {
+  J: ["..#", "..#", "..#", "#.#", ".##"],
+  U: ["#.#", "#.#", "#.#", "#.#", "###"],
+  G: [".##", "#..", "#.#", "#.#", ".##"],
+  O: [".#.", "#.#", "#.#", "#.#", ".#."],
+  B: ["##.", "#.#", "##.", "#.#", "##."],
+  M: ["#...#", "##.##", "#.#.#", "#...#", "#...#"],
+  "-": ["...", "...", "###", "...", "..."],
+  "!": [".#.", ".#.", ".#.", "...", ".#."]
+};
+function stamp(grid, text, ink, x0, y0) {
+  for (const ch of text) {
+    const glyph = font[ch];
+    if (!glyph) throw new Error(`xploders: no glyph for "${ch}"`);
+    glyph.forEach((line, dy) => {
+      for (let dx = 0; dx < line.length; dx++) if (line[dx] === "#") grid[y0 + dy][x0 + dx] = ink;
+    });
+    x0 += glyph[0].length + 1;
+  }
+}
+__name(stamp, "stamp");
+function textWidth(text) {
+  return [...text].reduce((w, ch) => w + (font[ch]?.[0].length ?? 3) + 1, -1);
+}
+__name(textWidth, "textWidth");
+
 // src/art/jug.js
 var palette2 = {
   ".": null,
@@ -1445,15 +1472,6 @@ var CORK_ROW = 9;
 var halfWidths = [2, 2, 2, 3, 4, 6, 8, 10, 11, 12, 13, ...Array(16).fill(14), 13, 13, 12, 10];
 var HEIGHT = CORK_ROW + halfWidths.length;
 var GLAZE_END = CORK_ROW + 11;
-var font = {
-  J: ["..#", "..#", "..#", "#.#", ".##"],
-  U: ["#.#", "#.#", "#.#", "#.#", "###"],
-  G: [".##", "#..", "#.#", "#.#", ".##"],
-  O: [".#.", "#.#", "#.#", "#.#", ".#."],
-  B: ["##.", "#.#", "##.", "#.#", "##."],
-  M: ["#.#", "###", "#.#", "#.#", "#.#"],
-  "-": ["...", "...", "###", "...", "..."]
-};
 var lettering = [
   { text: "JUG-O-", colour: "u", row: 23 },
   { text: "BOOM", colour: "m", row: 29 }
@@ -1509,20 +1527,7 @@ function paintJug() {
   g[CORK_ROW - 1][CENTER] = "q";
   g[CORK_ROW - 1][CENTER + 1] = "r";
   g[CORK_ROW - 2][CENTER] = "r";
-  for (const { text, colour, row } of lettering) {
-    const width = text.length * 4 - 1;
-    let x0 = CENTER - Math.floor(width / 2);
-    for (const ch of text) {
-      const glyph = font[
-        /** @type {keyof typeof font} */
-        ch
-      ];
-      glyph.forEach((line, dy) => {
-        for (let dx = 0; dx < 3; dx++) if (line[dx] === "#") g[row + dy][x0 + dx] = colour;
-      });
-      x0 += 4;
-    }
-  }
+  for (const { text, colour, row } of lettering) stamp(g, text, colour, CENTER - Math.floor(textWidth(text) / 2), row);
   return g;
 }
 __name(paintJug, "paintJug");
@@ -1547,10 +1552,10 @@ var shardFrames = [
 ];
 
 // src/shard.js
-var sprite2 = Sprite.fromPixels(shardFrames, palette2);
+var jugShards = Sprite.fromPixels(shardFrames, palette2);
 var _Shard = class _Shard {
   /** @param {ShardInit} init */
-  constructor({ x, y, scale, random: r }) {
+  constructor({ x, y, scale, random: r, sprite: sprite2 = jugShards }) {
     const angle = r.range(0, Math.PI * 2);
     const speed = r.range(2, 7);
     this.x = x;
@@ -1558,7 +1563,8 @@ var _Shard = class _Shard {
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed - 2.5;
     this.scale = scale;
-    this.frame = r.int(0, shardFrames.length - 1);
+    this.sprite = sprite2;
+    this.frame = r.int(0, sprite2.frames - 1);
     this.rotation = r.range(0, Math.PI * 2);
     this.spin = r.range(-0.3, 0.3);
     this.life = r.int(70, 110);
@@ -1580,7 +1586,7 @@ var _Shard = class _Shard {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const alpha = Math.min(1, (this.life - this.age) / _Shard.FADE_STEPS);
-    sprite2.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation });
+    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation });
   }
 };
 __name(_Shard, "Shard");
@@ -1673,6 +1679,314 @@ __publicField(
 /** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
 __publicField(_Jug, "sprite", Sprite.fromPixels(frames, palette2));
 var Jug = _Jug;
+
+// src/milk.js
+var _Milk = class _Milk {
+  /** @param {MilkInit} init */
+  constructor({ x, y, scale, random: r }) {
+    const angle = r.range(0, Math.PI * 2);
+    const speed = r.range(2, 8);
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 2;
+    this.radius = r.range(0.6, 1.3) * scale;
+    this.life = r.int(40, 70);
+    this.age = 0;
+    this.dead = false;
+    this.layer = "sprite";
+  }
+  get alpha() {
+    return Math.min(1, (this.life - this.age) / _Milk.FADE_STEPS);
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.vx *= 0.98;
+    this.vy += _Milk.GRAVITY;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.age++;
+    if (this.age >= this.life) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const alpha = this.alpha;
+    if (!(alpha > 0)) return;
+    const speed = Math.hypot(this.vx, this.vy);
+    const stretch = 1 + Math.min(1, speed / 8);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(this.x, this.y);
+    ctx.rotate(Math.atan2(this.vy, this.vx));
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.radius * stretch, this.radius, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#fbfdff";
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(120, 140, 170, 0.6)";
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+__name(_Milk, "Milk");
+__publicField(_Milk, "GRAVITY", 0.25);
+// px/step^2
+__publicField(_Milk, "FADE_STEPS", 20);
+var Milk = _Milk;
+
+// src/art/cow.js
+var palette3 = {
+  ".": null,
+  k: "#2b1e24",
+  // outline and spots
+  w: "#ffffff",
+  // hide
+  g: "#c8c6d8",
+  // hide shade
+  p: "#f4a3b4",
+  // nose, ear, udder
+  P: "#c8607a",
+  // nostrils, tongue
+  h: "#efe2c0",
+  // horns
+  n: "#5a4636",
+  // hooves
+  r: "#e8323a",
+  // open mouth
+  // steak
+  D: "#8a4a22",
+  // grilled meat
+  d: "#5e2e12",
+  // grill marks
+  f: "#e9c79a",
+  // fat rim
+  b: "#f6f0e2"
+  // bone
+};
+var WIDTH2 = 24;
+var HEIGHT2 = 16;
+var body2 = [
+  "........................",
+  ".................h....h.",
+  ".............kk.kkkkkkkk",
+  ".............kpkkwkkwwwk",
+  "..kkkkkkkkkkkkkkkwkwwkwk",
+  ".kwwkkkwwwwwkkwwwwwwwwwk",
+  "kkwkkkkwwwwkkkwwwwpppppk",
+  "kkgwkkwwwwwwkkwwwkpPpPpk",
+  "kkgwwwwwwkwwwwwwwkpppppk",
+  "kkggwwwwwwwwwwwggkkkkkk.",
+  ".kgggwwwwwwwwwgggk......",
+  "..kgggggggppggggkk......"
+];
+var excitedHead = (
+  /** @type {[number, number, string][]} */
+  [
+    [21, 4, "k"],
+    [21, 5, "k"],
+    [17, 8, "kpkrrk"],
+    [17, 9, ".krPPk"],
+    [18, 10, "kkkk"]
+  ]
+);
+var LEGS = [2, 6, 11, 15];
+function paintLegs(g, kick) {
+  LEGS.forEach((x, i) => {
+    const shift = [0, 0, kick[i] > 0 ? 1 : kick[i] < 0 ? -1 : 0, kick[i]];
+    for (let row = 12; row < HEIGHT2; row++) {
+      const dx = shift[row - 12];
+      const hoof = row === HEIGHT2 - 1;
+      g[row][x + dx] = "k";
+      g[row][x + dx + 1] = hoof ? "n" : "w";
+      g[row][x + dx + 2] = "k";
+    }
+    g[11][x + 1] = g[11][x + 1] === "p" ? "p" : "g";
+  });
+}
+__name(paintLegs, "paintLegs");
+function cow(kick, excited = false) {
+  const g = [...body2.map((row) => [...row]), ...Array.from({ length: HEIGHT2 - body2.length }, () => Array(WIDTH2).fill("."))];
+  paintLegs(g, kick);
+  if (excited) {
+    for (const [x, y, line] of excitedHead) {
+      for (let dx = 0; dx < line.length; dx++) if (line[dx] !== ".") g[y][x + dx] = line[dx];
+    }
+  }
+  return g.map((row) => row.join(""));
+}
+__name(cow, "cow");
+var floatFrames = [cow([0, 0, 0, 0]), cow([-1, 1, -1, 1]), cow([0, 0, 0, 0]), cow([1, -1, 1, -1])];
+var mooFrames = [cow([-1, -1, 1, 1], true), cow([1, 1, -1, -1], true)];
+var HEAD = { x: 20, y: 4 };
+var MOO = "MOO!";
+var BUBBLE_BODY = 5 + 4;
+var BUBBLE_WIDTH = textWidth(MOO) + 6;
+var BUBBLE_HEIGHT = BUBBLE_BODY + 3;
+function bubble(side) {
+  const w = BUBBLE_WIDTH;
+  const g = Array.from({ length: BUBBLE_HEIGHT }, () => Array(w).fill("."));
+  const last = BUBBLE_BODY - 1;
+  for (let y = 0; y < BUBBLE_BODY; y++) {
+    for (let x = 0; x < w; x++) {
+      const outerCorner = (y === 0 || y === last) && (x === 0 || x === w - 1);
+      const innerCorner = (y === 1 || y === last - 1) && (x === 1 || x === w - 2);
+      const edge = y === 0 || y === last || x === 0 || x === w - 1;
+      if (!outerCorner) g[y][x] = edge || innerCorner ? "k" : "w";
+    }
+  }
+  stamp(g, MOO, "k", 3, 2);
+  const tail = (
+    /** @type {[number, number, string][]} */
+    [
+      [4, last, "w"],
+      [5, last, "w"],
+      [3, last + 1, "k"],
+      [4, last + 1, "w"],
+      [5, last + 1, "k"],
+      [2, last + 2, "k"],
+      [3, last + 2, "k"],
+      [4, last + 2, "k"],
+      [1, last + 3, "k"]
+    ]
+  );
+  for (const [x, y, px] of tail) g[y][side === "left" ? x : w - 1 - x] = px;
+  return g.map((row) => row.join(""));
+}
+__name(bubble, "bubble");
+var bubbleFrames = [bubble("left"), bubble("right")];
+var steak = ["..kkkkkk.", ".kfbbbbDk", "kDDdbDdDk", "kDdDbDDdk", "kdDDbdDDk", ".kDdbDdk.", "..kkkkk.."];
+var steakFrames = [steak, steak.map((row) => [...row].reverse().join(""))];
+
+// src/projectiles/cow.js
+var LEG_FPS = 10;
+var MOO_FPS = 12;
+var steakSprite = Sprite.fromPixels(steakFrames, palette3);
+var _Cow = class _Cow extends Projectile {
+  /** @param {import('../projectile.js').ProjectileInit & CowOptions} init */
+  constructor(init) {
+    const d = _Cow.defaults;
+    const r = init.random;
+    const scale = init.scale ?? d.scale;
+    const x = init.size.width * inRange(r, init.launchPoint ?? d.launchPoint) / 100;
+    super({ ...init, x });
+    this.layer = /** @type {const} */
+    "sprite";
+    this.scale = scale;
+    this.speed = init.speed ?? d.speed;
+    this.hoverSteps = init.hoverSteps ?? d.hoverSteps;
+    this.mooSteps = init.mooSteps ?? d.mooSteps;
+    this.steakCount = init.steaks ?? d.steaks;
+    this.milkCount = init.milk ?? d.milk;
+    this.startX = x;
+    this.startY = init.y + _Cow.sprite.frameHeight * scale / 2;
+    this.moveTo(this.startX, this.startY);
+    const distance = Math.hypot(init.target.x - this.startX, init.target.y - this.startY);
+    this.floatSteps = Math.max(30, Math.round(distance / this.speed));
+    this.flip = init.target.x < this.startX;
+    this.bobRate = 2 * Math.PI / 50;
+    this.phase = "float";
+    this.phaseAge = 0;
+  }
+  get mooing() {
+    return this.phase === "moo";
+  }
+  update() {
+    if (this.phase === "float" && this.phaseAge >= this.floatSteps) this.next("hover");
+    if (this.phase === "hover" && this.phaseAge >= this.hoverSteps) this.next("moo");
+    this.age++;
+    this.phaseAge++;
+    const bob = Math.sin(this.age * this.bobRate) * this.scale;
+    if (this.phase === "float") {
+      const p = this.phaseAge / this.floatSteps;
+      const eased = 1 - (1 - p) ** 3;
+      this.moveTo(
+        this.startX + (this.target.x - this.startX) * eased,
+        this.startY + (this.target.y - this.startY) * eased + bob * p
+      );
+    } else if (this.phase === "hover") {
+      this.moveTo(this.target.x, this.target.y + bob);
+    } else if (this.engine?.calm) {
+      this.moveTo(this.target.x, this.target.y);
+    } else {
+      const r = this.random;
+      const shake = this.scale / 2;
+      const bounce = -Math.abs(Math.sin(this.phaseAge * 0.5)) * this.scale * 2;
+      this.moveTo(this.target.x + r.range(-shake, shake), this.target.y + bounce + r.range(-shake, shake));
+    }
+  }
+  /** @param {'hover' | 'moo'} phase */
+  next(phase) {
+    this.phase = phase;
+    this.phaseAge = 0;
+  }
+  shouldExplode() {
+    return this.mooing && this.phaseAge >= this.mooSteps;
+  }
+  /** @param {import('../engine.js').Engine} engine */
+  explode(engine) {
+    engine.burst(this.x, this.y, this.hue, this.burst);
+    const { x, y, random } = this;
+    engine.addParticles([
+      ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: steakSprite })),
+      ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random }))
+    ]);
+  }
+  /** Index into `Cow.sprite` for the current step. */
+  get frame() {
+    if (this.mooing) return 4 + Math.floor(this.phaseAge * MOO_FPS / 60) % 2;
+    return Math.floor(this.age * LEG_FPS / 60) % 4;
+  }
+  /**
+   * Where the speech bubble goes: above the head on the side the cow faces, or the
+   * other side if that runs off the canvas, then kept inside it.
+   * @returns {{x: number, y: number, frame: number, scale: number}} its centre, frame and scale
+   */
+  bubblePlace() {
+    const s = this.scale;
+    const pop = Math.min(1, 0.6 + 0.1 * this.phaseAge);
+    const headX = this.x + (this.flip ? -1 : 1) * (HEAD.x + 0.5 - _Cow.sprite.frameWidth / 2) * s;
+    const headY = this.y + (HEAD.y + 0.5 - _Cow.sprite.frameHeight / 2) * s;
+    const w = BUBBLE_WIDTH * s;
+    const h = BUBBLE_HEIGHT * s;
+    const reach = w / 2 - s;
+    let right = !this.flip;
+    if (right && headX + reach + w / 2 > this.size.width) right = false;
+    else if (!right && headX - reach - w / 2 < 0) right = true;
+    const x = Math.min(Math.max(headX + (right ? reach : -reach), w / 2), Math.max(w / 2, this.size.width - w / 2));
+    const y = Math.max(headY - 2 * s - h / 2, h / 2);
+    return { x, y, frame: right ? 0 : 1, scale: s * pop };
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    _Cow.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, flip: this.flip });
+    if (this.mooing) {
+      const b = this.bubblePlace();
+      _Cow.bubble.draw(ctx, b.frame, b.x, b.y, { scale: b.scale });
+    }
+  }
+};
+__name(_Cow, "Cow");
+/** Defaults for every cow; per launch: `show.launch('cow', 1, {scale: 4})`. */
+__publicField(
+  _Cow,
+  "defaults",
+  /** @type {Required<CowOptions>} */
+  {
+    scale: 3,
+    speed: 3,
+    hoverSteps: 18,
+    mooSteps: 30,
+    steaks: 8,
+    milk: 16,
+    launchPoint: { min: 10, max: 90 }
+  }
+);
+/** Frames 0-3 legs kicking, 4-5 excited (mouth open). Replace with your own art in the same layout. */
+__publicField(_Cow, "sprite", Sprite.fromPixels([...floatFrames, ...mooFrames], palette3));
+/** Frame 0 with its tail on the left (for a bubble right of the head), 1 on the right. */
+__publicField(_Cow, "bubble", Sprite.fromPixels(bubbleFrames, palette3));
+var Cow = _Cow;
 
 // src/pointer.js
 var _Pointer = class _Pointer {
@@ -1775,6 +2089,7 @@ var registry = /* @__PURE__ */ new Map();
 registry.set("rocket", Rocket);
 registry.set("chicken", Chicken);
 registry.set("jug", Jug);
+registry.set("cow", Cow);
 var isCanvas = /* @__PURE__ */ __name((el) => typeof /** @type {any} */
 el.getContext === "function", "isCanvas");
 var _Xploders = class _Xploders {
@@ -1961,10 +2276,12 @@ var Xploders = _Xploders;
 var index_default = Xploders;
 export {
   Chicken,
+  Cow,
   Feather,
   Flame,
   Glow,
   Jug,
+  Milk,
   Particle,
   Projectile,
   Random,

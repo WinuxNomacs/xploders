@@ -99,6 +99,7 @@
       <button id="fireworks" type="button">Fireworks</button>
       <button id="chicken" type="button">Chicken</button>
       <button id="jug" type="button">Jug-o-BOOM</button>
+      <button id="cow" type="button">Cow</button>
       <button id="clear" type="button">Clear</button>
       <label
         >Burst
@@ -124,14 +125,15 @@
     </div>
     <details class="howto">
       <summary>How to use</summary>
-      <p>Click or tap the sky to launch at that spot. It launches what you picked last (Fireworks, Chicken or Jug-o-BOOM), fireworks until you pick.</p>
+      <p>Click or tap the sky to launch at that spot. It launches what you picked last (Fireworks, Chicken, Jug-o-BOOM or Cow), fireworks until you pick.</p>
       <pre><code>import { Xploders } from 'xploders'
 
 const show = new Xploders(document.querySelector('.sky'))
 show.start()
 show.launch('chicken')
-show.launch('jug')</code></pre>
-      <p>Options, methods, the chicken and the Jug-o-BOOM: <a href="https://github.com/WinuxNomacs/xploders#readme">README on GitHub</a>.</p>
+show.launch('jug')
+show.launch('cow')</code></pre>
+      <p>Options, methods, the chicken, the Jug-o-BOOM and the cow: <a href="https://github.com/WinuxNomacs/xploders#readme">README on GitHub</a>.</p>
     </details>
     <script type="module" src="./main.js"></script>
   </body>

@@ -20,6 +20,7 @@ const types = {
   fireworks: { type: 'rocket', count: 5 },
   chicken: { type: 'chicken', init: () => ({ flight: el('flight').value }), count: 1 },
   jug: { type: 'jug', count: 1 },
+  cow: { type: 'cow', count: 1 },
 }
 let selected = 'fireworks'
 const select = (/** @type {string} */ id) => {
