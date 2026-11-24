@@ -6,6 +6,9 @@ here.
 
 **Live demo: <https://winuxnomacs.com/xploders/>**
 
+In the demo, click or tap the sky to launch at that spot: it launches whatever you picked last (Fireworks, Chicken or
+Jug-o-BOOM), fireworks until you pick. The demo starts at intensity 15; the library default is 30.
+
 > Early development; see [upcoming-changes.md](upcoming-changes.md) for what's next.
 
 ## Install

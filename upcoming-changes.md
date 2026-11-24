@@ -2,11 +2,17 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Demo: calmer default and click to fire (details below)
-- **Then:** 2. The exploding cow (details below)
+- **Up next:** 1. The exploding cow (details below)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Demo: calmer default and click to fire** (2026-11-24, branch `phase-5/click-to-fire`): the demo starts at
+  intensity 15 (library default still 30); a click or tap on the sky launches the last selected type at that spot
+  via `launchAt`, launch buttons show as selected, the Pointer button is gone (`demo/main.js`, `demo/index.html`).
+  Tests: browser tests for the starting intensity, click to fire for each type (unblocked by a full sky, nothing
+  from clicks on the controls), a tap on a phone, and the library `mouse` option still holding and dragging. Plan
+  kept below.
 
 - **Fixes from the code review** (2026-11-24, branch `fix/review-findings`): canvas sized from its own box and an
   intrinsic size pinned (`updateSize` in `src/index.js`); `deepMerge` skips prototype keys (`src/options.js`);
@@ -64,7 +70,7 @@
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
 
-## 1. Demo: calmer default and click to fire
+## Demo: calmer default and click to fire (done)
 
 Requests (`new.md`, 2026-11-24): "reduce default intensity by half"; "enable click to fire at target the last type
 the user selected, default fireworks". Builds on the demo page (`demo/index.html`, `demo/main.js`) and
@@ -96,12 +102,12 @@ the user selected, default fireworks". Builds on the demo page (`demo/index.html
   Chicken (and Jug-o-BOOM), a click launches that type at the click point; a click while 10+ auto rockets fly still
   launches; clicks on the controls launch nothing; no Pointer button.
 
-## 2. The exploding cow
+## 1. The exploding cow
 
 Request (`new.md`, 2026-11-24): "add exploding cows that appear to Moo! excitedly just before they explode into
 fireworks, steaks and milk splatters". Builds on the projectile API (`src/projectile.js`, `moveTo`), pixel sprites
 (`src/sprite.js`, text grids like `src/art/jug.js` and its 3x5 font), shards (`src/shard.js`) as the model for
-steaks, and the demo's launch buttons and click to fire from phase 1.
+steaks, and the demo's launch buttons and click to fire.
 
 ### Decisions (user, 2026-11-24)
 
