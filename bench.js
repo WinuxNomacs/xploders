@@ -8,13 +8,16 @@ const params = new URLSearchParams(location.search)
 const quick = params.has('quick')
 const only = Number(params.get('scene')) || 0
 const trailResolution = params.get('trails') === 'half' ? 'half' : 'full'
-const WARMUP_STEPS = quick ? 5 : 60
+// Long enough for the slowest launches (cows, about 130 steps) to start exploding before measuring.
+const WARMUP_STEPS = quick ? 5 : 150
 const MEASURE_STEPS = quick ? 20 : 300 // 5 s at 60 steps a second
 
 /**
  * Each scene sets the show up, then `every(step)` runs once per 1/60 s step, so the
  * scene is the same at any frame rate.
- * @type {{name: string, options: Record<string, any>, every?: (show: Xploders, step: number) => void}[]}
+ * A scene with `flight` stops launching that many steps before it ends, so everything it
+ * launched explodes before the sky is cleared.
+ * @type {{name: string, options: Record<string, any>, every?: (show: Xploders, step: number) => void, flight?: number}[]}
  */
 const scenes = [
   { name: 'Idle sky (nothing launching)', options: { intensity: 0 } },
@@ -36,8 +39,11 @@ const scenes = [
     every: (show, step) => {
       if (step % 30 !== 0) return
       const { width, height } = show.currentOptions.boundaries
-      show.launchAt(width * (0.15 + ((step / 30) % 8) * 0.1), Math.max(20, height - 250), 'cow')
+      const at = 15 + ((step / 30) % 8) * 10 // percent across
+      // starting just below its target, so a wide window doesn't stretch its float either
+      show.launchAt((width * at) / 100, Math.max(20, height - 250), 'cow', { launchPoint: { min: at - 3, max: at + 3 } })
     },
+    flight: 140, // float, hover and Moo! at 250 px up
   },
   {
     name: 'Saturn, shapes and animals (6 a second)',
@@ -45,9 +51,16 @@ const scenes = [
     every: (show, step) => step % 10 === 0 && show.launch(1),
   },
   {
-    name: 'Chickens (3 a second)',
+    // rising to a fixed height, like the cows, so a tall or wide window doesn't stretch their flight
+    name: 'Chickens (3 a second, 250 px up)',
     options: { intensity: 0 },
-    every: (show, step) => step % 20 === 0 && show.launch('chicken'),
+    every: (show, step) => {
+      if (step % 20 !== 0) return
+      const { width, height } = show.currentOptions.boundaries
+      // near the middle: a rising chicken starts at the bottom centre
+      show.launchAt(width / 2 + (((step / 20) % 7) - 3) * 50, Math.max(20, height - 250), 'chicken', { flight: 'rise' })
+    },
+    flight: 140, // rise and panic at 250 px up
   },
 ]
 
@@ -84,7 +97,7 @@ function runScene(scene) {
     const step0 = engine.step.bind(engine)
     engine.step = () => {
       const t = performance.now()
-      scene.every?.(show, step)
+      if (step < WARMUP_STEPS + MEASURE_STEPS - (quick ? 0 : (scene.flight ?? 0))) scene.every?.(show, step)
       step0()
       step++
       frameWork += performance.now() - t
