@@ -110,6 +110,14 @@ export class Xploders {
       })
       this.resizeObserver.observe(this.container)
     }
+    /** @type {IntersectionObserver | null} pauses drawing while the canvas is out of view */
+    this.visibilityObserver = null
+    if (typeof IntersectionObserver === 'function') {
+      this.visibilityObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) this.engine.visible = entry.isIntersecting
+      })
+      this.visibilityObserver.observe(this.canvas)
+    }
   }
 
   /**
@@ -170,6 +178,8 @@ export class Xploders {
     if (dispose) {
       this.resizeObserver?.disconnect()
       this.resizeObserver = null
+      this.visibilityObserver?.disconnect()
+      this.visibilityObserver = null
       this.pointer.dispose()
       this.reducedMotionQuery?.removeEventListener?.('change', this.syncMotion)
       if (this.ownsCanvas) this.canvas.remove()
@@ -240,7 +250,9 @@ export class Xploders {
 
   /** @param {XplodersOptions} options merged into the live options */
   updateOptions(options) {
+    const trailResolution = this.options.trailResolution
     deepMerge(this.options, options)
+    if (this.options.trailResolution !== trailResolution) this.engine.resize(this.engine.width, this.engine.height)
     this.pointer.sync()
     this.syncMotion()
     return this

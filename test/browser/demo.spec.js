@@ -339,7 +339,7 @@ test('the bench page on the built site runs every scene and reports it', async (
   await page.getByRole('button', { name: 'Run' }).click()
   await expect(page.locator('#status')).toHaveText('Done.', { timeout: 30000 })
   const scenes = await page.evaluate(() => window.benchScenes.length)
-  const lines = (await page.locator('#out').textContent()).split('\n').filter((l) => / \| /.test(l) && !l.startsWith('work'))
+  const lines = (await page.locator('#out').textContent()).split('\n').filter((l) => / \| /.test(l) && !l.startsWith('JS ms'))
   expect(lines).toHaveLength(scenes)
   expect(await page.getByRole('button', { name: 'Copy results' }).isEnabled()).toBe(true)
   expect(await page.locator('canvas').count()).toBe(0) // each scene's canvas is removed after it

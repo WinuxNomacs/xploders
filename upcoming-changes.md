@@ -2,7 +2,9 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Performance review (details below; to plan with the user)
+- **Up next:** 1. Performance review: built and published (skipping unseen frames, `trailResolution`, the bench);
+  waiting on the user's "after" runs in a real browser (`bench.html` and `bench.html?trails=half`) to close it and
+  decide whether half-resolution trails should become the default
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
@@ -352,6 +354,31 @@ DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src
 2. Speed-ups on a branch, measured headless against the same scenes; not published until the user has run "before"
    on the live site.
 3. Publish; the user runs "after".
+
+### Results so far (headless Chromium, 1280x800 at DPR 2, software rendering, 2026-11-24)
+
+Bench on `main` against this branch, two runs each, alternating, the machine otherwise idle (ms of work per frame):
+idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same within the runs' spread (fireworks show
+4.4-4.8, many sparks 14.3-15.0, jug fireballs 15.3-15.8 at about 36 frames/s, cows 2.0-2.2, Saturn/shapes/animals
+3.8-4.1, chickens 2.4).
+
+- Kept: skipping frames while out of view and once an empty sky has faded; one pass over the particles in
+  `drawLayer` (simpler; no measurable change).
+- Dropped: the cached spark colour with `globalAlpha` (no measurable change, so not worth the code).
+- Measured and dropped as a proposal: fireballs with half the flames at twice the area (no gain: the same area is
+  filled).
+- **Half-resolution trails: behind an option** (user, 2026-11-24): `trailResolution: 'half'`, default `'full'`;
+  the trail layer at half the device pixel ratio, at least 1. Stand-in measurement before building, the jug
+  fireball scene at DPR 1 against 2: 5.3-5.4 ms and 60 frames/s against 15.5-15.8 ms and 36 frames/s.
+  As built, headless at DPR 2 in a 1280x1306 window: JavaScript time halves (fireworks show 6.1-6.4 to 2.9-3.2 ms,
+  many sparks 19.7 to 10.6), but frames/s drop (60 to 45-50 in every busy scene, two alternating runs): with no GPU,
+  scaling the layer up happens after JavaScript, where the bench's time column doesn't see it. Whether it pays on a
+  real GPU needs the user's run of `bench.html?trails=half`; it stays off by default until then.
+- The user's "before" run, 2026-11-24, Firefox 160 on Windows, 1704x1306 at DPR 1.5, 165 Hz: idle sky 4.6 ms
+  JavaScript per frame; fireworks show 10.2 ms at 80 frames/s; many sparks 20.8 ms at 48 frames/s; jug fireballs
+  11.0 ms at 76 frames/s; Saturn/shapes/animals 7.9 ms at 99 frames/s; chickens 2.0 ms at 165 frames/s. Its cow
+  scene measured only floating cows (in a tall window none exploded within 5 s); the scene now aims 250 px up.
+  Firefox rounds the timer to 1 ms, so its p95 values are whole numbers.
 
 ### Candidates (each measured, kept only if it looks the same)
 

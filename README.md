@@ -70,7 +70,8 @@ All except the getters and `waitStop` return the show, so calls chain.
 ### Options
 
 Units are per 1/60 s step, as fireworks-js's are per frame. The show runs in fixed steps, so it looks the same at any
-refresh rate.
+refresh rate. It skips drawing frames nobody would see: while the canvas is scrolled out of view, and once an empty
+sky's trails have faded (it keeps stepping, so `waitStop` still resolves). Browsers already pause it in a hidden tab.
 
 | Option         | Default                                  | Meaning                                                    |
 | -------------- | ---------------------------------------- | ---------------------------------------------------------- |
@@ -98,6 +99,7 @@ refresh rate.
 | `maxProjectiles` | `100`                                  | Cap on projectiles in flight; `launch()` beyond it launches fewer |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
 | `reducedMotion` | `'auto'`                                | `'auto'`, `'always'` or `'ignore'`, see below              |
+| `trailResolution` | `'full'`                              | `'half'` draws sparks, flames and glows at half the device pixel ratio (never below 1 pixel per CSS px); sprites stay crisp. Cheaper on high-DPI screens, slightly softer sparks |
 | `seed`         | random                                   | Seed for a repeatable show                                 |
 
 The fireworks-js `sound` option is not supported; it is ignored if passed.
@@ -295,6 +297,14 @@ npm run check                     # lint, typecheck, unit tests, build, browser 
 Individual steps: `npm run lint`, `npm run typecheck`, `npm test` (Vitest), `npm run build` (writes `dist/`),
 `npm run build:site` (builds `dist/` and the demo site in `site/`), `npm run test:browser` (Playwright, starts its
 own server on port 8123; needs `npm run build:site` first).
+
+### Bench
+
+`/demo/bench.html` (also on the demo site: <https://winuxnomacs.com/xploders/bench.html>) runs fixed, seeded scenes
+for 5 seconds each and reports the show's work per frame and the frame rate, ready to copy. `?scene=4` runs only the
+fourth scene; `?trails=half` runs every scene with `trailResolution: 'half'`; `?quick` runs each briefly (the browser
+tests use it). The first column is JavaScript time only: the browser may finish drawing after it, so frames per
+second is the figure that counts.
 
 ### Demo site
 

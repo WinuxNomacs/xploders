@@ -44,6 +44,8 @@
  * @property {number} maxProjectiles cap on projectiles in flight
  * @property {Mouse} mouse pointer launch
  * @property {'auto' | 'always' | 'ignore'} reducedMotion calm the show when the visitor asks for reduced motion
+ * @property {'full' | 'half'} trailResolution 'half' draws sparks, flames and glows at half the device pixel ratio
+ *   (never below one pixel per CSS px), much cheaper on high-DPI screens; sprites stay crisp (ours)
  * @property {number} [seed] seed for a repeatable show
  */
 
@@ -81,6 +83,7 @@ export function defaultOptions() {
     maxProjectiles: 100,
     mouse: { click: false, move: false, max: 1, projectile: 'rocket' },
     reducedMotion: 'auto',
+    trailResolution: 'full',
   }
 }
 
