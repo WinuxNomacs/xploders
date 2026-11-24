@@ -68,6 +68,40 @@ describe('launch', () => {
     }
   })
 
+  it('keeps the fireworks-js box when right and bottom are left out', () => {
+    const { show } = makeShow()
+    expect(show.currentOptions.boundaries).toMatchObject({ right: null, bottom: null })
+    expect(show.targetArea).toEqual({ left: 50, top: 50, right: 700, bottom: 300 })
+  })
+
+  it('aims inside a box set by all four margins, and back to the default box with null', () => {
+    const { show, engine } = makeShow({ boundaries: { x: 100, y: 120, right: 30, bottom: 40 } })
+    expect(show.targetArea).toEqual({ left: 100, top: 120, right: 770, bottom: 560 })
+    show.launch(80)
+    const xs = engine.projectiles.map((p) => p.target.x)
+    const ys = engine.projectiles.map((p) => p.target.y)
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(100)
+    expect(Math.max(...xs)).toBeLessThanOrEqual(770)
+    expect(Math.max(...xs)).toBeGreaterThan(700) // reaches past the default box's right edge
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(120)
+    expect(Math.max(...ys)).toBeLessThanOrEqual(560)
+    expect(Math.max(...ys)).toBeGreaterThan(300) // and below half the height
+    show.updateBoundaries({ right: null, bottom: null })
+    expect(show.targetArea).toEqual({ left: 100, top: 120, right: 600, bottom: 300 })
+  })
+
+  it('draws the debug outline and its corner handles where the targets go', () => {
+    const { show, canvas, engine } = makeShow({ boundaries: { x: 100, y: 120, right: 30, bottom: 40, debug: true } })
+    const rects = []
+    canvas.ctx.strokeRect = (...a) => rects.push(['stroke', ...a])
+    canvas.ctx.fillRect = (...a) => rects.push(['fill', ...a])
+    engine.draw(1)
+    expect(rects).toContainEqual(['stroke', 100, 120, 670, 440])
+    expect(rects.filter((r) => r[0] === 'fill' && r[3] === 6)).toHaveLength(4)
+    expect(rects).toContainEqual(['fill', 767, 557, 6, 6])
+    show.stop()
+  })
+
   it('on a stopped show, runs until the sky is empty and then stops', () => {
     const { show, scheduler, engine } = makeShow()
     show.launch(2)

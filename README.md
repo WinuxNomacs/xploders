@@ -63,6 +63,7 @@ layout (`width: 100%`), otherwise it keeps the size it had when the show started
 | `updateSize({width, height})` | Resizes; by default to the container                                                  |
 | `updateBoundaries(b)`         | Merges into `boundaries`                                                              |
 | `isRunning`, `currentOptions`, `calm` | Getters (`calm`: reduced motion is in effect)                                 |
+| `targetArea`                  | Getter: the boundaries box, `{left, top, right, bottom}` in CSS px                 |
 
 All except the getters and `waitStop` return the show, so calls chain.
 
@@ -90,7 +91,7 @@ refresh rate.
 | `lineWidth`    | `{trace: {min: 1, max: 2}, explosion: {min: 1, max: 3}}` | Stroke widths                              |
 | `lineStyle`    | `'round'`                                | Line cap                                                   |
 | `opacity`      | `0.5`                                    | Trail fade per step                                        |
-| `boundaries`   | `{x: 50, y: 50, debug: false}`           | Margins for where rockets explode; `debug` draws the area  |
+| `boundaries`   | `{x: 50, y: 50, right: null, bottom: null, debug: false}` | Margins for where rockets explode, see below; `debug` draws the area |
 | `autoresize`   | `true`                                   | Follow the container's size                                |
 | `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, or a list to pick from per firework |
 | `maxParticles` | `4000`                                   | Cap on live particles                                      |
@@ -100,6 +101,20 @@ refresh rate.
 | `seed`         | random                                   | Seed for a repeatable show                                 |
 
 The fireworks-js `sound` option is not supported; it is ignored if passed.
+
+### Boundaries
+
+Rockets (and launched objects) aim at random spots inside the boundaries box: `x` px in from the left, `y` px down
+from the top, `right` px in from the right and `bottom` px up from the bottom. Leave `right` or `bottom` out (or
+`null`) for fireworks-js's box: a right margin of twice `x`, and the bottom at half the height. `width` and `height`
+are set from the canvas size. `launchAt` and pointer launch aim where they are told, inside the box or not.
+
+```js
+show.updateBoundaries({ x: 40, right: 40, y: 80, bottom: 120, debug: true })
+show.targetArea // {left: 40, top: 80, right: ..., bottom: ...}
+```
+
+In the demo, checking Boundaries shows the box with sliders for its four margins; its edges and corners can be dragged.
 
 ### Pointer launch
 
