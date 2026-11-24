@@ -83,7 +83,7 @@ export class Chicken extends Projectile {
       const r = this.random
       const shake = Math.max(1, this.scale / 2)
       this.moveTo(this.target.x + r.range(-shake, shake), this.target.y + r.range(-shake, shake))
-      this.flash = this.panicAge % 6 < 2
+      this.flash = !this.engine?.calm && this.panicAge % 6 < 2
       return
     }
     this.travelled = Math.min(this.distance, this.travelled + this.speed)

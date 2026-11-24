@@ -51,9 +51,16 @@ export class Engine {
     this.ctx = ctx
     this.options = options
     this.random = random
+    /** reduced motion: no auto-launch, no flicker, no flashing (set by Xploders) */
+    this.calm = false
     // Flicker is drawn per frame, so it must not consume the seeded generator.
+    // In calm mode it returns 1, so flickering particles keep their full lightness.
     const flicker = new Random()
-    this.flickerRandom = () => flicker.next()
+    this.flickerRandom = () => (this.calm ? 1 : flicker.next())
+    /** @type {import('./pointer.js').Pointer | null} set by Xploders */
+    this.pointer = null
+    /** @type {(name: string) => ProjectileClass | undefined} registered types, set by Xploders */
+    this.resolve = () => undefined
     this.raf = env.raf ?? ((cb) => requestAnimationFrame(cb))
     this.caf = env.caf ?? ((id) => cancelAnimationFrame(id))
     this.now = env.now ?? (() => performance.now())
@@ -150,7 +157,10 @@ export class Engine {
   /** One fixed 1/60 s step of the whole show. */
   step() {
     const o = this.options
-    if (this.autoLaunch && o.intensity > 0) {
+    if (this.pointer?.active && o.mouse.click && this.projectiles.length < o.mouse.max) {
+      this.launch(1, this.resolve(o.mouse.projectile))
+    }
+    if (this.autoLaunch && !this.calm && o.intensity > 0) {
       // fireworks-js advances its clock by intensity * pi per second.
       this.launchClock += (STEP_MS * o.intensity * Math.PI) / 1000
       if (this.launchClock > this.launchAt) {
@@ -210,14 +220,14 @@ export class Engine {
     const b = o.boundaries
     for (let i = 0; i < count; i++) {
       const x = (this.width * inRange(r, o.rocketsPoint, true)) / 100
-      const target = {
+      // As in fireworks-js: aim at the pointer while held, or while `move` is on and it is over the canvas.
+      const target = this.pointer?.target() ?? {
         x: r.int(Math.min(b.x, b.width - b.x * 2), Math.max(b.x, b.width - b.x * 2)),
         y: r.int(Math.min(b.y, b.height * 0.5), Math.max(b.y, b.height * 0.5)),
       }
       const size = { width: this.width, height: this.height }
-      this.projectiles.push(
-        new Cls({ x, y: this.height, target, size, hue: inRange(r, o.hue, true), options: o, random: r, ...extra }),
-      )
+      const hue = inRange(r, o.hue, true)
+      this.projectiles.push(new Cls({ x, y: this.height, target, size, hue, options: o, random: r, engine: this, ...extra }))
     }
   }
 

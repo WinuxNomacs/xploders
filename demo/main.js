@@ -16,6 +16,12 @@ el('auto').addEventListener('click', () => {
 el('fireworks').addEventListener('click', () => show.launch(5))
 el('chicken').addEventListener('click', () => show.launch('chicken', 1, { flight: el('flight').value }))
 el('clear').addEventListener('click', () => show.clear())
+el('pointer').addEventListener('click', () => {
+  const on = el('pointer').getAttribute('aria-pressed') !== 'true'
+  show.updateOptions({ mouse: { click: on, move: on, max: 3 } })
+  el('pointer').setAttribute('aria-pressed', String(on))
+  el('pointer').textContent = `Pointer: ${on ? 'on' : 'off'}`
+})
 el('burst').addEventListener('change', () => {
   const v = el('burst').value
   show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle'] : /** @type {any} */ (v) })

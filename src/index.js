@@ -8,6 +8,7 @@ import { Chicken } from './projectiles/chicken.js'
 import { bursts } from './bursts.js'
 import { Sprite, parsePixels } from './sprite.js'
 import { Feather } from './feather.js'
+import { Pointer } from './pointer.js'
 
 export { Projectile, Particle, Feather, Rocket, Chicken, Sprite, Random, bursts, defaultOptions, parsePixels }
 
@@ -41,7 +42,8 @@ export class Xploders {
   /**
    * @param {Element} target a canvas, or a container to create a canvas in
    * @param {XplodersOptions} [options]
-   * @param {Partial<import('./engine.js').Env>} [env] for tests: stand-ins for requestAnimationFrame, the clock and canvas creation
+   * @param {Partial<import('./engine.js').Env> & {matchMedia?: (query: string) => MediaQueryList}} [env]
+   *   for tests: stand-ins for requestAnimationFrame, the clock, canvas creation and matchMedia
    */
   constructor(target, options = {}, env) {
     /** @type {Options} */
@@ -60,6 +62,15 @@ export class Xploders {
     this.random = new Random(this.options.seed)
     this.engine = new Engine(this.canvas, this.options, this.random, env)
     this.engine.defaultProjectile = registry.get('rocket')
+    this.engine.resolve = (name) => registry.get(name)
+    this.pointer = new Pointer(this.canvas, this.options, () => this.engine, () => this.pressed())
+    this.engine.pointer = this.pointer
+    const matchMedia = env?.matchMedia ?? globalThis.matchMedia
+    /** @type {MediaQueryList | null} */
+    this.reducedMotionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null
+    this.syncMotion = this.syncMotion.bind(this)
+    this.reducedMotionQuery?.addEventListener?.('change', this.syncMotion)
+    this.syncMotion()
     /** @type {(() => void)[]} pending waitStop() promises */
     this.waiters = []
     this.updateSize()
@@ -80,6 +91,26 @@ export class Xploders {
    */
   static register(name, cls) {
     registry.set(name, cls)
+  }
+
+  /** Calm mode on or off, from the `reducedMotion` option and the visitor's setting. */
+  syncMotion() {
+    const mode = this.options.reducedMotion
+    this.engine.calm = mode === 'always' || (mode === 'auto' && Boolean(this.reducedMotionQuery?.matches))
+  }
+
+  /** True while reduced motion has calmed the show. */
+  get calm() {
+    return this.engine.calm
+  }
+
+  /** A pointer hold started: on a stopped show, run until the sky is empty, as `launch` does. */
+  pressed() {
+    if (!this.engine.running) {
+      this.engine.autoLaunch = false
+      this.engine.onEmpty = () => this.stop()
+      this.engine.startLoop()
+    }
   }
 
   get isRunning() {
@@ -111,6 +142,8 @@ export class Xploders {
     if (dispose) {
       this.resizeObserver?.disconnect()
       this.resizeObserver = null
+      this.pointer.dispose()
+      this.reducedMotionQuery?.removeEventListener?.('change', this.syncMotion)
       if (this.ownsCanvas) this.canvas.remove()
     }
     for (const resolve of this.waiters.splice(0)) resolve()
@@ -153,6 +186,17 @@ export class Xploders {
   }
 
   /**
+   * Launches one projectile that explodes at (x, y), in CSS pixels from the canvas's top left.
+   * @param {number} x
+   * @param {number} y
+   * @param {string} [type]
+   * @param {Record<string, any>} [init]
+   */
+  launchAt(x, y, type = 'rocket', init = {}) {
+    return this.launch(type, 1, { ...init, target: { x, y } })
+  }
+
+  /**
    * Stops auto-launching and resolves once everything in the sky has burnt out.
    * @param {boolean} [dispose] as for `stop`
    * @returns {Promise<void>}
@@ -169,6 +213,8 @@ export class Xploders {
   /** @param {XplodersOptions} options merged into the live options */
   updateOptions(options) {
     deepMerge(this.options, options)
+    this.pointer.sync()
+    this.syncMotion()
     return this
   }
 
