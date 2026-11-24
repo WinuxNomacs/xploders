@@ -379,6 +379,13 @@ idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same with
   11.0 ms at 76 frames/s; Saturn/shapes/animals 7.9 ms at 99 frames/s; chickens 2.0 ms at 165 frames/s. Its cow
   scene measured only floating cows (in a tall window none exploded within 5 s); the scene now aims 250 px up.
   Firefox rounds the timer to 1 ms, so its p95 values are whole numbers.
+- The user's "after" run, 2026-11-24, same browser and window: idle sky 0.00 ms at 165 frames/s (was 4.6 ms at 142);
+  fireworks show 6.9 ms at 110 frames/s (was 10.2 at 80); many sparks 20.9 at 47.5 (was 20.8 at 48); jug fireballs
+  11.2 at 75 (was 11.0 at 76); Saturn/shapes/animals 9.3 at 88 (was 7.9 at 99). One run each, so differences of a
+  few frames/s are within noise. The user saw cows and chickens vanish before exploding: scenes cleared the sky
+  mid-flight, chickens could cross the whole window, cows start anywhere along the bottom. Fixed in the bench: both
+  aim 250 px up from a start near their target, launching stops before the scene ends, and measuring starts after
+  150 steps; in a 1704x1306 window at DPR 1.5 every cow (11) and chicken (16) launched explodes.
 
 ### Candidates (each measured, kept only if it looks the same)
 
