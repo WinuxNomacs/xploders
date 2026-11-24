@@ -2,7 +2,7 @@
  * Options, with fireworks-js names, shapes, defaults and units (per 1/60 s step).
  *
  * @typedef {{min: number, max: number}} MinMax
- * @typedef {'peony' | 'ring' | 'willow' | 'crackle'} BurstStyle
+ * @typedef {'peony' | 'ring' | 'willow' | 'crackle' | 'fireball'} BurstStyle
  *
  * @typedef {object} Boundaries
  * @property {number} x left/right margin for rocket targets, px

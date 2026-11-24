@@ -149,8 +149,9 @@ export class Sprite {
    * @param {boolean} [opts.flip] mirror horizontally
    * @param {boolean} [opts.flash] draw the white silhouette instead
    * @param {number} [opts.alpha]
+   * @param {number} [opts.rotation] radians, clockwise, about the centre
    */
-  draw(ctx, frame, x, y, { scale = 1, flip = false, flash = false, alpha = 1 } = {}) {
+  draw(ctx, frame, x, y, { scale = 1, flip = false, flash = false, alpha = 1, rotation = 0 } = {}) {
     this.build()
     const image = flash && this.flashImage ? this.flashImage : this.image
     if (!image || !isReady(image)) return
@@ -160,6 +161,7 @@ export class Sprite {
     ctx.imageSmoothingEnabled = false
     ctx.globalAlpha = alpha
     ctx.translate(Math.round(x), Math.round(y))
+    if (rotation) ctx.rotate(rotation)
     if (flip) ctx.scale(-1, 1)
     ctx.drawImage(image, (frame % this.frames) * this.frameWidth, 0, this.frameWidth, this.frameHeight, -Math.round(w / 2), -Math.round(h / 2), w, h)
     ctx.restore()

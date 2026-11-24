@@ -1,5 +1,6 @@
 import { Particle } from './particle.js'
 import { inRange } from './random.js'
+import { Flame, Glow, Smoke } from './fireball.js'
 
 /**
  * Burst styles. Each returns up to `count` particles for an explosion at (x, y).
@@ -12,7 +13,7 @@ import { inRange } from './random.js'
  * @property {import('./options.js').Options} options
  * @property {import('./random.js').Random} random
  *
- * @typedef {(c: BurstContext) => Particle[]} Burst
+ * @typedef {(c: BurstContext) => import('./engine.js').ParticleLike[]} Burst
  */
 
 /**
@@ -71,6 +72,53 @@ export const bursts = {
   // Flickers, then each particle pops into a few tiny sparks near the end.
   crackle: (c) =>
     Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })),
+
+  // A ball of fire: a glow, rising flames that cool from yellow to red, gold
+  // embers, then smoke as the flames die. Its own colours; the hue is unused.
+  fireball: (c) => {
+    const r = c.random
+    const smoke = Math.floor(c.count * 0.15)
+    const embers = Math.floor(c.count * 0.25)
+    const flames = Math.max(1, c.count - smoke - embers - 1)
+    return [
+      new Glow(c.x, c.y, 120),
+      ...Array.from(
+        { length: flames },
+        () =>
+          new Flame({
+            x: c.x + r.range(-10, 10),
+            y: c.y + r.range(-10, 10),
+            angle: r.range(0, Math.PI * 2),
+            speed: r.range(1, 7),
+            radius: r.range(14, 28),
+            life: r.int(45, 80),
+          }),
+      ),
+      ...Array.from({ length: embers }, () =>
+        particle(c, {
+          hue: r.range(25, 45),
+          speed: r.range(2, 9),
+          brightness: r.range(60, 75),
+          decay: r.range(0.02, 0.04),
+          gravity: c.options.gravity * 0.6,
+          flicker: true,
+        }),
+      ),
+      ...Array.from(
+        { length: smoke },
+        () =>
+          new Smoke({
+            x: c.x + r.range(-35, 35),
+            y: c.y + r.range(-30, 5),
+            delay: r.int(25, 45),
+            life: r.int(60, 90),
+            drift: r.range(-0.6, 0.6),
+            rise: r.range(0.4, 0.9),
+            radius: r.range(16, 26),
+          }),
+      ),
+    ]
+  },
 }
 
 /**

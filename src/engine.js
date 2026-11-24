@@ -247,7 +247,8 @@ export class Engine {
     const make = bursts[choice] ?? bursts.peony
     const count = Math.min(Math.floor(o.particles), this.capacity())
     if (count <= 0) return
-    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }))
+    // A burst may add a few non-particle pieces (a fireball's glow): trim to fit.
+    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }).slice(0, this.capacity()))
   }
 
   /**

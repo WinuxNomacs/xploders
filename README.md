@@ -35,6 +35,7 @@ const show = new Xploders(document.querySelector('.sky'), { burst: ['peony', 'ri
 show.start() // auto-launches at `intensity`
 show.launch(5) // five more rockets
 show.launch('chicken') // a chicken that explodes into fireworks
+show.launch('jug') // a Jug-o-BOOM that bursts into a fireball
 await show.waitStop() // stop launching, resolve once the sky is empty
 ```
 
@@ -47,7 +48,7 @@ so the page shows through.
 | ----------------------------- | ------------------------------------------------------------------------------------ |
 | `start()`                     | Runs the show, auto-launching at `intensity`                                          |
 | `launch(count)`               | Launches rockets; on a stopped show, runs until the sky is empty                      |
-| `launch(type, count, init?)`  | Launches a registered type, such as `'chicken'`; `init` goes to each one             |
+| `launch(type, count, init?)`  | Launches a registered type, `'chicken'` or `'jug'`; `init` goes to each one          |
 | `launchAt(x, y, type?, init?)` | Launches one that explodes at (x, y), CSS px from the canvas's top left             |
 | `waitStop(dispose?)`          | Stops auto-launch; the promise resolves once everything has burnt out                 |
 | `stop(dispose?)`              | Stops and clears at once. `dispose` also stops following the size and removes a canvas the show created |
@@ -86,7 +87,7 @@ refresh rate.
 | `opacity`      | `0.5`                                    | Trail fade per step                                        |
 | `boundaries`   | `{x: 50, y: 50, debug: false}`           | Margins for where rockets explode; `debug` draws the area  |
 | `autoresize`   | `true`                                   | Follow the container's size                                |
-| `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, or a list to pick from per firework |
+| `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, or a list to pick from per firework |
 | `maxParticles` | `4000`                                   | Cap on live particles                                      |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
 | `reducedMotion` | `'auto'`                                | `'auto'`, `'always'` or `'ignore'`, see below              |
@@ -98,7 +99,7 @@ The fireworks-js `sound` option is not supported; it is ignored if passed.
 
 With `mouse.click`, holding the pointer on the canvas launches rockets towards it, up to `mouse.max` in flight; the
 hold follows the pointer and ends on release, even outside the canvas. With `mouse.move`, auto-launched rockets aim at
-the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'` works).
+the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'` and `'jug'` work).
 
 Events are read from the canvas only, as in fireworks-js. If your overlay is click-through (`pointer-events: none`),
 pointer launch doesn't fire, and the page underneath stays usable. While `click` is on, the canvas gets
@@ -134,6 +135,33 @@ Chicken.defaults.panicSteps = 60 // change the default for every chicken
 To use your own art, replace `Chicken.sprite` with a sprite of the same layout: frames 0-3 flap (wings up, mid,
 down, mid), 4-5 panic, facing right.
 
+### The Jug-o-BOOM
+
+An original pixel-art stoneware whiskey jug with "JUG-O-BOOM" on its belly and a burning rag wick. It is lobbed up
+from the bottom on an arc, tumbling end over end and shedding sparks, and at the top of the arc it bursts into a
+fireball (a flash, rising flames that cool from yellow to red, gold embers, then smoke) and stoneware shards.
+
+```js
+import { Jug } from 'xploders'
+
+show.launch('jug')
+show.launch('jug', 2, { spin: 0, burst: 'willow' }) // upright, with a willow burst instead
+Jug.defaults.scale = 3 // change the default for every jug
+```
+
+| Option   | Default      | Meaning                                                             |
+| -------- | ------------ | ------------------------------------------------------------------- |
+| `scale`  | `2`          | CSS pixels per sprite pixel (the sprite is 31x40)                    |
+| `spin`   | `0.05`       | Tumble speed, radians per 1/60 s; it tumbles the way it was thrown   |
+| `shards` | `12`         | Shards in the explosion (they count towards `maxParticles`)          |
+| `burst`  | `'fireball'` | Burst style                                                          |
+
+The `'fireball'` burst works for rockets too (`burst: 'fireball'`). It uses its own fire colours, not `hue`. Its
+smoke is grey, drawn over the page, so it shows on light and dark backgrounds.
+
+To use your own art, replace `Jug.sprite` with a sprite of the same layout: frames 0-2 the wick flame flickering,
+upright, wick at the top.
+
 ### Pixel sprites
 
 `Sprite.fromPixels(frames, palette, fps)` builds a sprite sheet from text grids, one character per pixel:
@@ -148,7 +176,7 @@ const star = Sprite.fromPixels(
   ],
   { '.': null, y: '#ffd400' },
 )
-star.draw(ctx, frame, x, y, { scale: 4, flip: false, flash: false, alpha: 1 })
+star.draw(ctx, frame, x, y, { scale: 4, flip: false, flash: false, alpha: 1, rotation: 0 })
 ```
 
 `new Sprite(image, {frameWidth, frameHeight, frames, fps})` works with any image or canvas holding frames side by

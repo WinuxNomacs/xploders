@@ -7,6 +7,13 @@
 
 ## Done
 
+- **Jug-o-BOOM** (2026-11-23, branch `phase-4/jug`): original stoneware jug art lettered "JUG-O-BOOM"
+  (`src/art/jug.js`, painted into text grids with a 3x5 font), the lobbed, tumbling jug with wick embers
+  (`src/projectiles/jug.js`), the `fireball` burst style (`src/bursts.js`, `src/fireball.js`: glow, flames, embers,
+  smoke), shards (`src/shard.js`), `rotation` on `Sprite.draw`, bursts trimmed to `maxParticles` in `engine.burst`,
+  demo button and Fireball burst option. Tests: `test/jug.test.js` (the cap test seen failing without the trim),
+  browser test for a jug's whole life. Plan kept below under "Jug-o-BOOM (done)".
+
 - **Extras: pointer launch, reduced motion, demo site** (2026-11-23, branch `phase-3/extras`): fireworks-js `mouse`
   options with pointer capture and CSS-box mapping (`src/pointer.js`), `launchAt`, `reducedMotion` with live
   following (`src/index.js`, `engine.calm`), site build and gh-pages publishing (`scripts/build-site.js`,
@@ -43,6 +50,51 @@
 - **Setup** (2026-11-23, branch `setup/scaffold`): package, esbuild build (ESM + IIFE + `.d.ts`), dev server, demo
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
+
+## Jug-o-BOOM (done)
+
+Planned and built 2026-11-23. Branch `phase-4/jug`.
+
+A large old-fashioned stoneware whiskey jug, lit like a molotov cocktail, lobbed up from the bottom; it bursts
+into a fireball at the top of its arc.
+
+### Decisions (user, 2026-11-23)
+
+- **Bursts at the top of the arc**, mid-air like the fireworks (not smashing at the bottom edge).
+- **Tumbles end over end** in flight: smooth rotation, pixels kept chunky (`rotation` on `Sprite.draw`). Slow
+  enough that the lettering reads for part of the flight.
+- **Stoneware crock look**: cream body, brown glazed top, ring handle from the neck, cork, burning rag wick.
+- **It says "Jug-o-BOOM" on it**: "JUG-O-" in cobalt blue (like stoneware stencils) over "BOOM" in red, a 3x5
+  pixel font. This sets the size: 31x40 sprite pixels, drawn at scale 2 by default (62x80 CSS px).
+
+### API
+
+- `show.launch('jug')`, registered as `jug`; the demo and docs call it Jug-o-BOOM. Class `Jug`, exported.
+- `Jug.defaults`: `scale` 2, `spin` (rad/step, a random sign per jug), `shards` 12. Per launch through `init`.
+- Burst style `fireball`, usable by any projectile (`burst: 'fireball'`); the jug uses it unless `burst` is given.
+
+### Behaviour
+
+- Flight: the base `Projectile` ballistic arc (exact peak at the target), starting just below the bottom edge;
+  explodes at the apex (the base trigger). The wick flame animates (3 frames) and drops embers on the trail layer.
+- Fireball (from the explosion's particle budget): a glow that swells and fades; flames (soft round blobs on the
+  trail layer) that rise like hot air and age white-yellow, orange, red; gold embers (fireworks-js particles);
+  dark smoke puffs that start as the flames die (sprite layer, since the additive trail layer can't show dark).
+- Shards: stoneware pieces (brown and cream) that tumble and fall, like the chicken's feathers but heavier.
+- Reduced motion: embers don't flicker (as other particles); nothing else flashes.
+
+### What can go wrong
+
+- Particle cap: the fireball is split from the `particles` budget and trimmed to `maxParticles`; wick embers and
+  shards are added through `addParticles`, which trims too.
+- A jug launched with a target below its start (pointer near the bottom): the arc's rise is 0, it bursts at once.
+
+### Tests
+
+- Unit: the art parses (lettering present, frames the same size); the jug starts below the bottom, peaks at its
+  target and bursts there; spin changes rotation; embers respect the cap; fireball flames rise and redden, smoke
+  starts late, everything dies; shards fall; `burst: 'fireball'` works on rockets.
+- Browser: a jug's whole life in the demo (launch, burst, sky empties) with no errors; screenshots looked at.
 
 ## Fireworks engine (done)
 

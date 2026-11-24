@@ -5,12 +5,31 @@ import { Projectile } from './projectile.js'
 import { Particle } from './particle.js'
 import { Rocket } from './projectiles/rocket.js'
 import { Chicken } from './projectiles/chicken.js'
+import { Jug } from './projectiles/jug.js'
 import { bursts } from './bursts.js'
 import { Sprite, parsePixels } from './sprite.js'
 import { Feather } from './feather.js'
+import { Shard } from './shard.js'
+import { Flame, Glow, Smoke } from './fireball.js'
 import { Pointer } from './pointer.js'
 
-export { Projectile, Particle, Feather, Rocket, Chicken, Sprite, Random, bursts, defaultOptions, parsePixels }
+export {
+  Projectile,
+  Particle,
+  Feather,
+  Shard,
+  Flame,
+  Glow,
+  Smoke,
+  Rocket,
+  Chicken,
+  Jug,
+  Sprite,
+  Random,
+  bursts,
+  defaultOptions,
+  parsePixels,
+}
 
 /**
  * @typedef {import('./options.js').Options} Options
@@ -19,12 +38,14 @@ export { Projectile, Particle, Feather, Rocket, Chicken, Sprite, Random, bursts,
  * @typedef {import('./engine.js').ProjectileClass} ProjectileClass
  * @typedef {import('./projectile.js').ProjectileInit} ProjectileInit
  * @typedef {import('./projectiles/chicken.js').ChickenOptions} ChickenOptions
+ * @typedef {import('./projectiles/jug.js').JugOptions} JugOptions
  */
 
 /** @type {Map<string, ProjectileClass>} */
 const registry = new Map()
 registry.set('rocket', Rocket)
 registry.set('chicken', Chicken)
+registry.set('jug', Jug)
 
 /** @param {Element} el @returns {el is HTMLCanvasElement} */
 const isCanvas = (el) => typeof (/** @type {any} */ (el).getContext) === 'function'
@@ -37,6 +58,7 @@ const isCanvas = (el) => typeof (/** @type {any} */ (el).getContext) === 'functi
  * const show = new Xploders(document.querySelector('.sky'))
  * show.start()              // auto-launches at `intensity`
  * show.launch('chicken')    // and a chicken
+ * show.launch('jug')        // and a Jug-o-BOOM
  */
 export class Xploders {
   /**
