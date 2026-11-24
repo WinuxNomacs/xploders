@@ -99,7 +99,7 @@ sky's trails have faded (it keeps stepping, so `waitStop` still resolves). Brows
 | `maxProjectiles` | `100`                                  | Cap on projectiles in flight; `launch()` beyond it launches fewer |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
 | `reducedMotion` | `'auto'`                                | `'auto'`, `'always'` or `'ignore'`, see below              |
-| `trailResolution` | `'full'`                              | `'half'` draws sparks, flames and glows at half the device pixel ratio (never below 1 pixel per CSS px); sprites stay crisp. Cheaper on high-DPI screens, slightly softer sparks |
+| `trailResolution` | `'full'`                              | `'half'` draws sparks, flames and glows at half the device pixel ratio (never below 1 pixel per CSS px); sprites stay crisp. Much faster with many sparks; can be slower with big sprites or fireballs (measured in Firefox: many sparks 48 to 139 fps, cows 165 to 112), so measure your own show with the bench |
 | `seed`         | random                                   | Seed for a repeatable show                                 |
 
 The fireworks-js `sound` option is not supported; it is ignored if passed.

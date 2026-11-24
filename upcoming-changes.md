@@ -2,12 +2,17 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Performance review: built and published (skipping unseen frames, `trailResolution`, the bench);
-  waiting on the user's "after" runs in a real browser (`bench.html` and `bench.html?trails=half`) to close it and
-  decide whether half-resolution trails should become the default
+- **Up next:** nothing planned; new requests go in `new.md`
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Performance review** (2026-11-24, branches `phase-11/performance`, `phase-11/speedups`, `fix/bench-scenes`): the
+  bench page (`demo/bench.html`, `demo/bench.js`, on the site), skipping frames nobody would see (out of view, or
+  an empty sky that has faded) with skipped steps drawn later (`src/engine.js` `shouldDraw`, `fadeSteps`;
+  `IntersectionObserver` in `src/index.js`), and `trailResolution: 'half'` behind an option, kept opt-in by the
+  user's decision after mixed Firefox results. Tests: `test/idle.test.js`, the bench browser test. In the user's
+  Firefox an idle sky went from 4.6 ms of JavaScript a frame to 0. Results and decisions kept below.
 
 - **Animals burst** (2026-11-24, branch `phase-10/animals`): eight side-view outlines drawn as strokes on a 100 x 100
   grid, points shared between strokes by length, centred and fitted (`animals` and `drawing` in `src/shapes.js`);
@@ -325,7 +330,7 @@ Builds on: the Shapes burst (done), whose outline-to-particles code it reuses wi
 - Tests: every animal within radius 1 with exactly n points, both facings occur, the burst keeps its form, and
   twice the count. Each outline checked by eye in a rendering before it ships.
 
-## 1. Performance review
+## Performance review (done)
 
 Request (`new.md`, 2026-11-24): "Once the current planned updates are complete. Plan a performance review to improve
 rendering performance and reduce unnecessary cpu/gpu impact."
@@ -391,7 +396,7 @@ idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same with
   fireworks show 110 against 165 (the display's limit); Saturn/shapes/animals 88 against 165; jug fireballs 75
   against 59.5; cows 165 against 112; chickens 165 against 113. JavaScript time in the cow and chicken scenes
   rose from about 2 to 6.7 ms, so scaling the half-size layer up costs Firefox a few ms a frame, which only pays
-  where many sparks are drawn on that layer. Mixed, so `'full'` stays the default unless the user decides otherwise.
+  where many sparks are drawn on that layer. Kept opt-in, `'full'` the default (user, 2026-11-24).
 
 ### Candidates (each measured, kept only if it looks the same)
 
