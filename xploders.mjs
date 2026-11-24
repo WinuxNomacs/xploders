@@ -534,9 +534,128 @@ __name(_Smoke, "Smoke");
 __publicField(_Smoke, "MAX_ALPHA", 0.35);
 var Smoke = _Smoke;
 
+// src/shapes.js
+var TAU = Math.PI * 2;
+function alongPath(path, n, closed) {
+  if (n <= 0 || path.length === 0) return [];
+  const pts = closed ? [...path, path[0]] : path;
+  const lengths = [0];
+  for (let i = 1; i < pts.length; i++) {
+    lengths.push(lengths[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  }
+  const total = lengths.at(-1) ?? 0;
+  if (total === 0) return Array.from({ length: n }, () => [pts[0][0], pts[0][1]]);
+  const out = [];
+  let j = 1;
+  for (let i = 0; i < n; i++) {
+    const d = total * i / (closed || n === 1 ? n : n - 1);
+    while (j < pts.length - 1 && lengths[j] < d) j++;
+    const span = lengths[j] - lengths[j - 1] || 1;
+    const f = Math.min(1, Math.max(0, (d - lengths[j - 1]) / span));
+    out.push([pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * f, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * f]);
+  }
+  return out;
+}
+__name(alongPath, "alongPath");
+function rotate(points, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return points.map(([x, y]) => [x * c - y * s, x * s + y * c]);
+}
+__name(rotate, "rotate");
+function fit(points) {
+  const far = Math.max(...points.map(([x, y]) => Math.hypot(x, y))) || 1;
+  return points.map(([x, y]) => [x / far, y / far]);
+}
+__name(fit, "fit");
+function sample(f, samples = 240) {
+  return Array.from({ length: samples }, (_, i) => f(i / samples));
+}
+__name(sample, "sample");
+function split(n, weights) {
+  const total = weights.reduce((a, b) => a + b, 0);
+  const counts = weights.map((w) => Math.floor(n * w / total));
+  for (let i = 0; counts.reduce((a, b) => a + b, 0) < n; i = (i + 1) % counts.length) counts[i]++;
+  return counts;
+}
+__name(split, "split");
+var shapes = {
+  /** A flattened circle at a random tilt. */
+  ellipse: /* @__PURE__ */ __name((n, r) => {
+    const ratio = r.range(0.3, 0.9);
+    return { points: rotate(alongPath(sample((t) => [Math.cos(TAU * t), Math.sin(TAU * t) * ratio]), n, true), r.range(0, Math.PI)) };
+  }, "ellipse"),
+  /** A triangle, square, pentagon or hexagon at a random rotation. */
+  polygon: /* @__PURE__ */ __name((n, r) => {
+    const sides = r.int(3, 6);
+    const corners = Array.from({ length: sides }, (_, i) => [Math.cos(TAU * i / sides), Math.sin(TAU * i / sides)]);
+    return { points: rotate(alongPath(corners, n, true), r.range(0, TAU)) };
+  }, "polygon"),
+  /** Two and a half turns, out from the middle. */
+  spiral: /* @__PURE__ */ __name((n, r) => {
+    const turns = 2.5;
+    const path = (
+      /** @type {Point[]} */
+      Array.from({ length: 400 }, (_, i) => {
+        const t = i / 399;
+        return [t * Math.cos(TAU * turns * t), t * Math.sin(TAU * turns * t)];
+      })
+    );
+    return { points: rotate(alongPath(path, n, false), r.range(0, TAU)) };
+  }, "spiral"),
+  /** A round face, two eyes and a smile. */
+  smiley: /* @__PURE__ */ __name((n, r) => {
+    const [face, left, right, smile] = split(n, [0.58, 0.07, 0.07, 0.28]);
+    const eye = /* @__PURE__ */ __name((cx, k) => alongPath(sample((t) => [cx + 0.09 * Math.cos(TAU * t), -0.3 + 0.09 * Math.sin(TAU * t)]), k, true), "eye");
+    const arc = Array.from({ length: 100 }, (_, i) => {
+      const a = Math.PI * (0.2 + 0.6 * i / 99);
+      return [0.55 * Math.cos(a), 0.05 + 0.5 * Math.sin(a)];
+    });
+    const points = [
+      ...alongPath(sample((t) => [Math.cos(TAU * t), Math.sin(TAU * t)]), face, true),
+      ...eye(-0.35, left),
+      ...eye(0.35, right),
+      ...alongPath(arc, smile, false)
+    ];
+    return { points: rotate(points, r.range(-0.25, 0.25)) };
+  }, "smiley"),
+  /** The classic heart curve, point down. */
+  heart: /* @__PURE__ */ __name((n, r) => {
+    const path = sample((t) => {
+      const a = TAU * t;
+      const x = 16 * Math.sin(a) ** 3;
+      const y = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+      return [x, y - 2.5];
+    });
+    return { points: rotate(fit(alongPath(path, n, true)), r.range(-0.25, 0.25)) };
+  }, "heart"),
+  /** A five-pointed star, point up, with two eyes (each a small burst; see `bursts.shapes`). */
+  star: /* @__PURE__ */ __name((n, r) => {
+    const corners = Array.from({ length: 10 }, (_, i) => {
+      const a = -Math.PI / 2 + Math.PI * i / 5;
+      const radius = i % 2 === 0 ? 1 : 0.42;
+      return [radius * Math.cos(a), radius * Math.sin(a)];
+    });
+    const tilt = r.range(-0.2, 0.2);
+    return {
+      points: rotate(alongPath(corners, n, true), tilt),
+      eyes: rotate(
+        [
+          [-0.15, -0.06],
+          [0.15, -0.06]
+        ],
+        tilt
+      )
+    };
+  }, "star")
+};
+
 // src/bursts.js
 var GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 var FIREBALL_SPEED = 6;
+var SATURN_BALL = 4;
+var SATURN_RING = 9;
+var SHAPE_SPEED = 8;
 function particle({ x, y, hue, options: o, random: r, size = 1 }, overrides = {}) {
   const init = {
     x,
@@ -637,7 +756,61 @@ var bursts = {
         })
       )
     ];
-  }, "fireball")
+  }, "fireball"),
+  // A ball of sparks in the launch colour inside one flattened, tilted ring in the
+  // opposite colour. Shared friction keeps the ball round and the ring an ellipse.
+  saturn: /* @__PURE__ */ __name((c) => {
+    const r = c.random;
+    const ball = Math.max(1, Math.round(c.count * 0.55));
+    const ring = Math.max(0, c.count - ball);
+    const decay = inRange(r, c.options.decay);
+    const ringHue = (c.hue + 180) % 360;
+    const tilt = r.range(-0.6, 0.6);
+    const flat = r.range(0.22, 0.38);
+    const offset = r.range(0, Math.PI * 2);
+    return [
+      ...Array.from(
+        { length: ball },
+        (_, i) => particle(c, {
+          angle: offset + i * GOLDEN_ANGLE,
+          speed: SATURN_BALL * Math.sqrt((i + 0.5) / ball),
+          decay
+        })
+      ),
+      ...Array.from({ length: ring }, (_, i) => {
+        const a = offset + i / ring * Math.PI * 2;
+        const x = Math.cos(a);
+        const y = Math.sin(a) * flat;
+        const rx = x * Math.cos(tilt) - y * Math.sin(tilt);
+        const ry = x * Math.sin(tilt) + y * Math.cos(tilt);
+        return particle(c, { angle: Math.atan2(ry, rx), speed: SATURN_RING * Math.hypot(rx, ry), hue: ringHue, decay });
+      })
+    ];
+  }, "saturn"),
+  // One outline picked at random. Each spark launches at a point of the outline,
+  // so the outline grows and drifts as a whole; one decay, so it fades as a whole.
+  // A star's eyes are two small fireworks: sparks around each eye's point.
+  shapes: /* @__PURE__ */ __name((c) => {
+    const r = c.random;
+    const names = Object.keys(shapes);
+    const name = names[r.int(0, names.length - 1)];
+    const decay = inRange(r, c.options.decay);
+    const eyeCount = name === "star" ? Math.min(c.count - 1, 2 * Math.max(3, Math.round(c.count * 0.08))) : 0;
+    const shape = shapes[name](c.count - eyeCount, r);
+    const eyes = shape.eyes ?? [];
+    const eyeHue = (c.hue + 60) % 360;
+    return [
+      ...shape.points.map(([x, y]) => particle(c, { angle: Math.atan2(y, x), speed: SHAPE_SPEED * Math.hypot(x, y), decay })),
+      ...Array.from({ length: eyes.length ? eyeCount : 0 }, (_, i) => {
+        const [ex, ey] = eyes[i % eyes.length];
+        const a = r.range(0, Math.PI * 2);
+        const pop = r.range(0.3, 0.9);
+        const vx = ex * SHAPE_SPEED + Math.cos(a) * pop;
+        const vy = ey * SHAPE_SPEED + Math.sin(a) * pop;
+        return particle(c, { angle: Math.atan2(vy, vx), speed: Math.hypot(vx, vy), hue: eyeHue, decay, flicker: true });
+      })
+    ];
+  }, "shapes")
 };
 function crackleSparks(parent, r, max) {
   return Array.from(

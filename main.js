@@ -49,7 +49,7 @@ show.canvas.addEventListener('pointerdown', (e) => {
 el('clear').addEventListener('click', () => show.clear())
 el('burst').addEventListener('change', () => {
   const v = el('burst').value
-  show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle', 'fireball'] : /** @type {any} */ (v) })
+  show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle', 'fireball', 'saturn', 'shapes'] : /** @type {any} */ (v) })
 })
 el('intensity').addEventListener('input', () => show.updateOptions({ intensity: Number(el('intensity').value) }))
 
