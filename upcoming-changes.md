@@ -2,7 +2,7 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** nothing planned yet
+- **Up next:** 1. Fixes from the code review of 2026-11-24 (plan below)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
@@ -50,6 +50,31 @@
 - **Setup** (2026-11-23, branch `setup/scaffold`): package, esbuild build (ESM + IIFE + `.d.ts`), dev server, demo
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
+
+## Fixes from the code review of 2026-11-24
+
+Branch `fix/review-findings`. The user asked for all of them to be fixed. Each fix gets a test seen failing first.
+
+1. **Canvas sizing feedback loop**: a `<canvas>` with no CSS size grew every frame at DPR > 1 (600x300 to 33554432
+   px wide in six frames, measured). Size from the canvas's own box; when its CSS size follows its backing store,
+   pin the measured size in CSS px.
+2. **Prototype pollution** in `deepMerge` (`__proto__` reached `Object.prototype`, confirmed): skip `__proto__`,
+   `constructor`, `prototype`.
+3. **One throwing particle froze the show** with `isRunning` still true: particle `update`/`draw` errors remove that
+   particle and are logged once per step; a frame that fails anyway is logged and the loop goes on. Bursts at a
+   non-finite position are ignored; no drawing to a zero-size backing store.
+4. **Padded container**: drew at 340x240, shown at 300x200 (measured). Fixed by 1 (the canvas's own box).
+5. **Demo on phones**: controls covered 0-216 px, bursts landed at 50-350 px. Compact controls on narrow screens,
+   and the demo keeps `boundaries.y` below the controls.
+6. **Fireball draw cost**: about 2.3x a spark per piece (measured, headless). Flames, glow and smoke draw cached soft
+   sprites (`drawImage`) instead of a new radial gradient per piece per frame; measure again.
+7. **Reduced motion** still showed the fireball's flash: no glow in calm mode (bursts get `calm`).
+8. Minor: an unknown `mouse.projectile` warns once and launches nothing (it silently launched rockets); the build
+   runs `tsc` through `node` (`npx` via `execFileSync` fails on Windows); smoke draws behind sprites (`behind` on
+   particles); new option `maxProjectiles` (default 100) caps projectiles in flight.
+9. Found while fixing: unit tests had no canvas for sprite sheets, so sprites drawn in Node threw and the engine
+   removed them, letting a jug test pass vacuously. Tests install a fake `OffscreenCanvas`/`ImageData`, and the
+   whole-life tests check that nothing was logged as an error.
 
 ## Jug-o-BOOM (done)
 
