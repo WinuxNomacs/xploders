@@ -1,6 +1,11 @@
 import { Particle } from './particle.js'
 import { inRange } from './random.js'
-import { Flame, Glow, Smoke } from './fireball.js'
+import { Core, Flame, Flash, Glow, Smoke } from './fireball.js'
+
+/** Turn between flames in a sunflower spread, radians. */
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+/** Front flames' launch speed, px/step at burst size 1; they travel about ten times this. */
+const FIREBALL_SPEED = 6
 
 /**
  * Burst styles. Each returns up to `count` particles for an explosion at (x, y).
@@ -77,30 +82,34 @@ export const bursts = {
   crackle: (c) =>
     Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })),
 
-  // A ball of fire: a glow, rising flames that cool from yellow to red, gold
-  // embers, then smoke as the flames die. Its own colours; the hue is unused.
-  // Under reduced motion there is no flash of light.
+  // A ball of fire: a white flash and a glow, then flames blasting out as a
+  // round ball (a sunflower spread fills the disc evenly; one shared friction
+  // keeps it round as it grows) around a blue heart; then they rise
+  // and cool to red, with gold embers, then smoke as the flames die. Its own
+  // colours; the hue is unused. Under reduced motion there is no flash of light.
   fireball: (c) => {
     const r = c.random
     const s = c.size ?? 1
     const smoke = Math.floor(c.count * 0.15)
     const embers = Math.floor(c.count * 0.25)
-    const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 0 : 1))
+    const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 1 : 3))
+    const offset = r.range(0, Math.PI * 2)
     return [
-      ...(c.calm ? [] : [new Glow(c.x, c.y, 120 * s)]),
-      ...Array.from(
-        { length: flames },
-        () =>
-          new Flame({
-            x: c.x + r.range(-10, 10) * s,
-            y: c.y + r.range(-10, 10) * s,
-            angle: r.range(0, Math.PI * 2),
-            speed: r.range(1, 7) * s,
-            radius: r.range(14, 28) * s,
-            life: r.int(45, 80),
-            buoyancy: Flame.BUOYANCY * s,
-          }),
-      ),
+      ...(c.calm ? [] : [new Flash(c.x, c.y, 45 * s), new Glow(c.x, c.y, 120 * s)]),
+      new Core(c.x, c.y, FIREBALL_SPEED * 10 * 0.6 * s, 20 * s),
+      ...Array.from({ length: flames }, (_, i) => {
+        const reach = Math.sqrt((i + 0.5) / flames) // 0 at the heart, 1 at the front
+        return new Flame({
+          x: c.x + r.range(-4, 4) * s,
+          y: c.y + r.range(-4, 4) * s,
+          angle: offset + i * GOLDEN_ANGLE + r.range(-0.15, 0.15),
+          speed: FIREBALL_SPEED * reach * r.range(0.92, 1.08) * s,
+          radius: r.range(14, 28) * s,
+          life: r.int(45, 80),
+          buoyancy: Flame.BUOYANCY * s,
+          blue: 1 - reach,
+        })
+      }),
       ...Array.from({ length: embers }, () =>
         particle(c, {
           hue: r.range(25, 45),

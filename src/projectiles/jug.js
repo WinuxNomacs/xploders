@@ -3,6 +3,7 @@ import { Particle } from '../particle.js'
 import { Sprite } from '../sprite.js'
 import { Shard } from '../shard.js'
 import { palette, frames } from '../art/jug.js'
+import { inRange } from '../random.js'
 
 /**
  * @typedef {object} JugOptions
@@ -10,6 +11,7 @@ import { palette, frames } from '../art/jug.js'
  * @property {number} [spin] tumble speed, rad/step (the direction follows the throw)
  * @property {number} [shards] stoneware pieces in the explosion
  * @property {number} [burstSize] how big the burst is: 1 is a rocket's size
+ * @property {import('../options.js').MinMax} [launchPoint] where along the bottom edge it starts, percent of width
  * @property {import('../options.js').BurstStyle} [burst] burst style, 'fireball' by default
  */
 
@@ -29,6 +31,7 @@ export class Jug extends Projectile {
     spin: 0.05,
     shards: 12,
     burstSize: 3,
+    launchPoint: { min: 10, max: 90 },
   })
 
   /** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
@@ -38,9 +41,10 @@ export class Jug extends Projectile {
   constructor(init) {
     const d = Jug.defaults
     const scale = init.scale ?? d.scale
-    // Start just below the bottom edge; the arc still peaks at the target.
-    super({ ...init, y: init.y + (Jug.sprite.frameHeight * scale) / 2 })
     const r = init.random
+    // Start at a random spot just below the bottom edge; the arc still peaks at the target.
+    const x = (init.size.width * inRange(r, init.launchPoint ?? d.launchPoint)) / 100
+    super({ ...init, x, y: init.y + (Jug.sprite.frameHeight * scale) / 2 })
     this.layer = /** @type {const} */ ('sprite')
     this.scale = scale
     this.shardCount = init.shards ?? d.shards

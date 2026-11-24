@@ -144,8 +144,10 @@ down, mid), 4-5 panic, facing right.
 ### The Jug-o-BOOM
 
 An original pixel-art stoneware whiskey jug with "JUG-O-BOOM" on its belly and a burning rag wick. It is lobbed up
-from the bottom on an arc, tumbling end over end and shedding sparks, and at the top of the arc it bursts into a
-fireball (a flash, rising flames that cool from yellow to red, gold embers, then smoke) and stoneware shards.
+from a random spot along the bottom edge on an arc, tumbling end over end and shedding sparks, and at the top of the
+arc it bursts into a fireball and stoneware shards. The fireball goes off with a bright white flash, then blasts out
+as a round ball, blue-white at its heart and bright orange-yellow at its front; it slows, rises like hot air, cools
+to red and turns to smoke, with gold embers flying out.
 
 ```js
 import { Jug } from 'xploders'
@@ -162,9 +164,11 @@ Jug.defaults.scale = 3 // change the default for every jug
 | `shards` | `12`         | Shards in the explosion (they count towards `maxParticles`)          |
 | `burst`  | `'fireball'` | Burst style                                                          |
 | `burstSize` | `3`      | How big the burst is: `1` is a rocket's burst; `3` spreads it three times as far, with flames and smoke three times as big |
+| `launchPoint` | `{min: 10, max: 90}` | Where along the bottom edge it starts, percent of width, random in this range (rockets use `rocketsPoint`) |
 
 The `'fireball'` burst works for rockets too (`burst: 'fireball'`). It uses its own fire colours, not `hue`. Its
-smoke is grey, drawn over the page, so it shows on light and dark backgrounds.
+blue heart and grey smoke are drawn over the page, so they show on light and dark backgrounds. Under reduced motion
+it has no white flash or glow.
 
 To use your own art, replace `Jug.sprite` with a sprite of the same layout: frames 0-2 the wick flame flickering,
 upright, wick at the top.
