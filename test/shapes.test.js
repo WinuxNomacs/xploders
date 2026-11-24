@@ -106,13 +106,13 @@ describe('Saturn burst', () => {
   it('has a ball in the launch colour inside a flattened ring in the opposite colour', () => {
     for (let seed = 1; seed <= 10; seed++) {
       const parts = bursts.saturn(c(60, seed, 30))
-      expect(parts).toHaveLength(60)
       const ball = parts.filter((p) => p.hue === 30)
       const ring = parts.filter((p) => p.hue === 210)
-      expect(ball.length + ring.length).toBe(60)
-      expect(ball.length).toBeGreaterThan(ring.length)
-      // the ring's sparks fly further than any of the ball's
-      expect(Math.max(...ring.map((p) => p.speed))).toBeGreaterThan(Math.max(...ball.map((p) => p.speed)) * 1.8)
+      expect(ball).toHaveLength(33)
+      expect(ring).toHaveLength(54) // a dense ring: twice the rest of the count
+      expect(parts).toHaveLength(87)
+      // the ring's sparks fly well past the ball's
+      expect(Math.max(...ring.map((p) => p.speed))).toBeGreaterThan(Math.max(...ball.map((p) => p.speed)) * 2.5)
       // flattened: its widest reach is at least twice its narrowest
       expect(Math.max(...ring.map((p) => p.speed))).toBeGreaterThan(Math.min(...ring.map((p) => p.speed)) * 2)
       expect(new Set(parts.map((p) => p.decay)).size).toBe(1)
