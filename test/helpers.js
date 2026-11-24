@@ -7,7 +7,7 @@ export function fakeCanvas(width = 800, height = 600) {
   const ctx = new Proxy(
     { log },
     {
-      get: (t, k) => (k in t ? t[k] : () => {}),
+      get: (t, k) => (k in t ? t[k] : k === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}),
       set: (t, k, v) => {
         if (k === 'fillStyle') log.fills.push(v)
         t[k] = v

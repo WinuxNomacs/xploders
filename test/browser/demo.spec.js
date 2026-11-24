@@ -89,6 +89,21 @@ test('a chicken flaps, panics and explodes into feathers and sparks without erro
   expect(errors).toEqual([])
 })
 
+test('a Jug-o-BOOM is lobbed up tumbling, bursts into a fireball and shards, and leaves an empty sky', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/demo/')
+  await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
+  await page.getByRole('button', { name: 'Jug-o-BOOM' }).click()
+  const start = await page.evaluate(() => ({ name: window.show.engine.projectiles[0].constructor.name, rotation: window.show.engine.projectiles[0].rotation }))
+  expect(start.name).toBe('Jug')
+  await expect.poll(() => page.evaluate(() => window.show.engine.projectiles[0]?.rotation), { timeout: 5000 }).not.toBe(start.rotation)
+  const kinds = () => page.evaluate(() => [...new Set(window.show.engine.particles.map((p) => p.constructor.name))].sort())
+  await expect.poll(kinds, { timeout: 15000, intervals: [100] }).toEqual(expect.arrayContaining(['Flame', 'Glow', 'Shard']))
+  expect(await count(page, 'projectiles')).toBe(0)
+  await expect.poll(() => count(page, 'particles'), { timeout: 15000 }).toBe(0)
+  expect(errors).toEqual([])
+})
+
 test('a moving chicken leaves no ghost, while the same chicken on the trail layer would', async ({ page }) => {
   await page.goto('/demo/')
   const result = await page.evaluate(() => {
@@ -183,8 +198,15 @@ test('the script-tag build exposes a global Xploders class', async ({ page }) =>
   const info = await page.evaluate(() => ({
     isClass: typeof window.Xploders === 'function',
     hasChicken: typeof window.Xploders.Chicken === 'function',
+    hasJug: typeof window.Xploders.Jug === 'function',
     hasBursts: Object.keys(window.Xploders.bursts).sort(),
     hasSprite: typeof window.Xploders.Sprite.fromPixels === 'function',
   }))
-  expect(info).toEqual({ isClass: true, hasChicken: true, hasBursts: ['crackle', 'peony', 'ring', 'willow'], hasSprite: true })
+  expect(info).toEqual({
+    isClass: true,
+    hasChicken: true,
+    hasJug: true,
+    hasBursts: ['crackle', 'fireball', 'peony', 'ring', 'willow'],
+    hasSprite: true,
+  })
 })

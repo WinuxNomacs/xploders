@@ -2,10 +2,17 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Jug-o-BOOM: a lobbed, burning whiskey jug with a fireball burst (plan below)
+- **Up next:** nothing planned yet
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Jug-o-BOOM** (2026-11-23, branch `phase-4/jug`): original stoneware jug art lettered "JUG-O-BOOM"
+  (`src/art/jug.js`, painted into text grids with a 3x5 font), the lobbed, tumbling jug with wick embers
+  (`src/projectiles/jug.js`), the `fireball` burst style (`src/bursts.js`, `src/fireball.js`: glow, flames, embers,
+  smoke), shards (`src/shard.js`), `rotation` on `Sprite.draw`, bursts trimmed to `maxParticles` in `engine.burst`,
+  demo button and Fireball burst option. Tests: `test/jug.test.js` (the cap test seen failing without the trim),
+  browser test for a jug's whole life. Plan kept below under "Jug-o-BOOM (done)".
 
 - **Extras: pointer launch, reduced motion, demo site** (2026-11-23, branch `phase-3/extras`): fireworks-js `mouse`
   options with pointer capture and CSS-box mapping (`src/pointer.js`), `launchAt`, `reducedMotion` with live
@@ -44,9 +51,9 @@
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
 
-## Jug-o-BOOM
+## Jug-o-BOOM (done)
 
-Planned 2026-11-23. Branch `phase-4/jug`.
+Planned and built 2026-11-23. Branch `phase-4/jug`.
 
 A large old-fashioned stoneware whiskey jug, lit like a molotov cocktail, lobbed up from the bottom; it bursts
 into a fireball at the top of its arc.
@@ -58,7 +65,7 @@ into a fireball at the top of its arc.
   enough that the lettering reads for part of the flight.
 - **Stoneware crock look**: cream body, brown glazed top, ring handle from the neck, cork, burning rag wick.
 - **It says "Jug-o-BOOM" on it**: "JUG-O-" in cobalt blue (like stoneware stencils) over "BOOM" in red, a 3x5
-  pixel font. This sets the size: 31x38 sprite pixels, drawn at scale 2 by default (62x76 CSS px).
+  pixel font. This sets the size: 31x40 sprite pixels, drawn at scale 2 by default (62x80 CSS px).
 
 ### API
 

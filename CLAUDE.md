@@ -27,7 +27,10 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
   `src/projectiles/` holds the built-in ones. `Rocket` reproduces fireworks-js `Trace` motion.
 - `src/particle.js` (fireworks-js `Explosion` motion), `src/bursts.js` (burst styles).
 - `src/sprite.js`: `parsePixels` (text grids to RGBA, pure) and `Sprite` (sheet built lazily on first draw, crisp,
-  flip, white flash silhouette). `src/art/chicken.js`: the original chicken art as text grids; `src/feather.js`.
+  flip, rotation, white flash silhouette). `src/art/chicken.js`: the original chicken art as text grids;
+  `src/feather.js`. `src/art/jug.js`: the Jug-o-BOOM art, painted into text grids with its lettering stamped from
+  a 3x5 font; `src/projectiles/jug.js`, `src/shard.js`, `src/fireball.js` (the `fireball` burst's flames, glow and
+  smoke).
 - Two layers in `Engine.draw`: things with `layer: 'trail'` draw on an offscreen layer that fades per step; the
   visible canvas is cleared, gets that layer copied in, then `layer: 'sprite'` things draw crisp on top.
 - `src/random.js`: seedable RNG. Anything that shapes the show uses the show's `Random`, never `Math.random`, so
