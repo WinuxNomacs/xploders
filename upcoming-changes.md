@@ -2,11 +2,18 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Animals burst (details below)
-- **Then:** 2. Performance review (after the planned updates)
+- **Up next:** 1. Performance review (details below; to plan with the user)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Animals burst** (2026-11-24, branch `phase-10/animals`): eight side-view outlines drawn as strokes on a 100 x 100
+  grid, points shared between strokes by length, centred and fitted (`animals` and `drawing` in `src/shapes.js`);
+  the `animals` burst with twice the count, one shared decay, mirrored at random (`src/bursts.js`); in `BurstStyle`,
+  the demo's Burst menu and Mix. Tests in `test/shapes.test.js`: each animal centred within radius 1 with exactly n
+  points; a burst keeps its form, uses twice the count, and matches exactly one drawing in one facing, both facings
+  occurring. Each outline checked by eye in a rendering (the snake's tongue and the monkey's tail redrawn after);
+  seen in headless Chromium at the default 50 particles. Plan kept below.
 
 - **Saturn and Shapes bursts** (2026-11-24, branch `phase-9/saturn-shapes`): outline generators resampled evenly by
   arc length (`src/shapes.js`: ellipse, polygon, spiral, smiley, heart, star with eye points), the `saturn` and
@@ -294,20 +301,29 @@ sunflower spread fills a disc evenly), the `burst` option and the demo's Burst m
   positions stay proportional to their launch points); Saturn's ring in the opposite hue and outside the ball, its
   ring flattened; the star's eyes; counts fit `count`.
 
-## 1. Animals burst
+## Animals burst (done)
 
 Request (`new.md`, 2026-11-24): "Add a burst type called Animals that explodes fireworks in the shapes of random zoo
 animals".
 
 Builds on: the Shapes burst (done), whose outline-to-particles code it reuses with animal outlines.
 
-Proposed: `'animals'`, outlines drawn by us as point lists (original art, per the repo rules), one picked at random
-per burst; in the Burst menu.
+### Decisions (user, 2026-11-24)
 
-Open decisions (to ask when planning): which animals (for example elephant, giraffe, lion, monkey, penguin), and
-whether an outline faces a random way.
+- **Animals: all eight**: elephant, giraffe, lion, monkey, penguin, flamingo, snake, turtle, picked at random.
+- **Facing: random left or right** per burst (the outline mirrored).
 
-## 2. Performance review
+### Design
+
+- `src/shapes.js`: an `animals` record of side-view outlines, each drawn by us as a few paths (closed silhouettes
+  plus open strokes: tails, legs, a trunk), points shared between paths by length, centred and fitted to radius 1.
+- `src/bursts.js`: `'animals'`, built like `'shapes'` (one shared decay, sparks launched at outline points), with
+  twice the `particles` count, since an outline with legs and a tail needs more points to read (still trimmed to
+  `maxParticles`). In `BurstStyle`, the demo's Burst menu and Mix.
+- Tests: every animal within radius 1 with exactly n points, both facings occur, the burst keeps its form, and
+  twice the count. Each outline checked by eye in a rendering before it ships.
+
+## 1. Performance review
 
 Request (`new.md`, 2026-11-24): "Once the current planned updates are complete. Plan a performance review to improve
 rendering performance and reduce unnecessary cpu/gpu impact."
@@ -316,7 +332,7 @@ Builds on: the measurements so far (in Done): step + draw per particle count, th
 cost (large additive soft dots are fill-rate bound: 10 jug fireballs about 76 ms per frame in headless Chromium at
 DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src/engine.js`).
 
-Proposed, to plan once phase 1 is done: profile the demo in a real GPU-backed browser as well as headless
+Proposed, to plan now that the other planned updates are done: profile the demo in a real GPU-backed browser as well as headless
 (headless uses software rendering, so its numbers are pessimistic); measure where frame time goes (trail fade,
 additive flames, sprite draws, particle updates); candidates to weigh: idling the loop when the sky is empty and
 auto-launch is off, a lower-resolution trail layer at high DPR, capping fireball fill (fewer, cached bigger dots),

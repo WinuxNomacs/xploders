@@ -93,7 +93,7 @@ refresh rate.
 | `opacity`      | `0.5`                                    | Trail fade per step                                        |
 | `boundaries`   | `{x: 50, y: 50, right: null, bottom: null, debug: false}` | Margins for where rockets explode, see below; `debug` draws the area |
 | `autoresize`   | `true`                                   | Follow the container's size                                |
-| `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, `'saturn'`, `'shapes'`, or a list to pick from per firework |
+| `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, `'saturn'`, `'shapes'`, `'animals'`, or a list to pick from per firework |
 | `maxParticles` | `4000`                                   | Cap on live particles                                      |
 | `maxProjectiles` | `100`                                  | Cap on projectiles in flight; `launch()` beyond it launches fewer |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
@@ -113,8 +113,9 @@ The fireworks-js `sound` option is not supported; it is ignored if passed.
 | `'fireball'` | A white flash, then a ball of fire with a blue heart that rises, cools to red and turns to smoke    |
 | `'saturn'`   | A ball in the launch colour inside a flattened, tilted ring in the opposite colour                  |
 | `'shapes'`   | An outline picked at random: a tilted ellipse, a polygon, a spiral, a smiley, a heart, or a star with little fireworks for eyes |
+| `'animals'`  | A zoo animal's outline picked at random, facing left or right: elephant, giraffe, lion, monkey, penguin, flamingo, snake or turtle. Uses twice `particles`, since legs and tails need the points |
 
-Saturn and shapes keep their form as they grow, drift and fade, since every spark in them shares one friction,
+Saturn, shapes and animals keep their form as they grow, drift and fade, since every spark in them shares one friction,
 gravity and fade.
 
 ### Boundaries

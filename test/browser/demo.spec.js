@@ -357,7 +357,7 @@ test('the script-tag build exposes a global Xploders class', async ({ page }) =>
     hasChicken: true,
     hasJug: true,
     hasCow: true,
-    hasBursts: ['crackle', 'fireball', 'peony', 'ring', 'saturn', 'shapes', 'willow'],
+    hasBursts: ['animals', 'crackle', 'fireball', 'peony', 'ring', 'saturn', 'shapes', 'willow'],
     hasSprite: true,
   })
 })
