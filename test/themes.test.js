@@ -3,6 +3,8 @@ import { Xploders, Chicken, Jug, Cow, Feather, pickTheme, DEFAULT_THEME } from '
 import { defaultOptions } from '../src/options.js'
 import { parsePixels } from '../src/sprite.js'
 import * as hen64 from '../src/art/chicken64.js'
+import * as jug64 from '../src/art/jug64.js'
+import { Shard } from '../src/shard.js'
 import { fakeCanvas, fakeScheduler } from './helpers.js'
 
 afterEach(() => vi.restoreAllMocks())
@@ -48,7 +50,7 @@ describe('Themes in a show', () => {
     s.launch('cow')
     const [hen, jug, cow] = s.engine.projectiles.map((p) => /** @type {any} */ (p).art)
     expect(hen).toBe(Chicken.themes['64bit'])
-    expect(jug).toBe(Jug.themes.retro)
+    expect(jug).toBe(Jug.themes['64bit'])
     expect(cow).toBe(Cow.themes.retro)
   })
 
@@ -103,5 +105,40 @@ describe('64-bit chicken art', () => {
     expect(new Set(hen64.flapFrames.map((f) => f.join(''))).size).toBe(3)
     expect(hen64.panicFrames[0].join('')).toContain('m') // inside the open beak
     expect(hen64.flapFrames[0].join('')).not.toContain('m')
+  })
+})
+
+describe('64-bit jug', () => {
+  it('has three 93x120 frames and six 9x9 shards, every pixel in the palette', () => {
+    for (const [frames, w, h] of [
+      [jug64.frames, 93, 120],
+      [jug64.shardFrames, 9, 9],
+    ]) {
+      for (const frame of frames) {
+        expect(frame).toHaveLength(h)
+        for (const row of frame) {
+          expect(row).toHaveLength(w)
+          for (const ch of row) expect(ch in jug64.palette).toBe(true)
+        }
+      }
+    }
+    expect(new Set(jug64.frames.map((f) => f.join(''))).size).toBe(3) // the flame flickers
+  })
+
+  it('is the same size on screen as the retro jug, and bursts into 64-bit shards', () => {
+    for (const theme of ['64bit', 'retro']) {
+      const art = Jug.themes[theme]
+      expect(art.sprite.frameWidth * art.pixelSize).toBe(31)
+      expect(art.sprite.frameHeight * art.pixelSize).toBe(40)
+      const s = show({ theme })
+      s.launch('jug', 1, { shards: 3 })
+      for (let i = 0; i < 3000 && s.engine.projectiles.length; i++) s.engine.step()
+      const shards = s.engine.particles.filter((p) => p instanceof Shard).map((p) => /** @type {any} */ (p))
+      expect(shards).toHaveLength(3)
+      for (const sh of shards) {
+        expect(sh.sprite).toBe(art.shards)
+        expect(sh.sprite.frameWidth * sh.pixelSize).toBe(3) // 3 retro pixels across in both themes
+      }
+    }
   })
 })

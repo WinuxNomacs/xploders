@@ -4,6 +4,7 @@ import { Sprite } from '../sprite.js'
 import { Shard, jugShards } from '../shard.js'
 import { pickTheme } from '../themes.js'
 import { palette, frames } from '../art/jug.js'
+import * as jug64 from '../art/jug64.js'
 import { inRange } from '../random.js'
 
 /**
@@ -36,11 +37,16 @@ export class Jug extends Projectile {
   })
 
   /**
-   * Art per theme (only retro so far, so every theme falls back to it). Frames 0-2: the wick
-   * flame flickering, upright, wick at the top. `shards`: the stoneware pieces.
+   * Art per theme. Frames 0-2: the wick flame flickering, upright, wick at the top. `shards`: the
+   * stoneware pieces. Replace a theme's art, or add a theme under a new name.
    * @type {Record<string, import('../themes.js').ThemeArt & {shards: Sprite}>}
    */
   static themes = {
+    '64bit': {
+      sprite: Sprite.fromPixels(jug64.frames, jug64.palette),
+      pixelSize: 1 / 3,
+      shards: Sprite.fromPixels(jug64.shardFrames, jug64.palette),
+    },
     retro: { sprite: Sprite.fromPixels(frames, palette), pixelSize: 1, shards: jugShards },
   }
 

@@ -2,11 +2,17 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. The 64-bit Jug-o-BOOM (details below)
-- **Then:** 2. The 64-bit cow
+- **Up next:** 1. The 64-bit cow (details below)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **The 64-bit Jug-o-BOOM** (2026-11-24, branch `phase-13/jug64`): 93x120 art with the retro jug's outline scaled up
+  smoothly, a dark glossy glaze with a glint and drips, cream stoneware shaded as a round body, lettering at twice
+  the font's size with a shadow, the handle, rag and a three-frame flame, and six shaded 9x9 shards
+  (`src/art/jug64.js`), as `Jug.themes['64bit']`. `Sprite.draw` smooths art shrunk below one screen pixel per pixel
+  (the 64-bit jug at its default scale on a DPR 1 screen), crisp otherwise (`src/sprite.js`). Tests in
+  `test/themes.test.js` and `test/sprite.test.js`. Seen tumbling beside the retro jug at DPR 1, 1.5 and 2.
 
 - **Themes: the model and the 64-bit chicken** (2026-11-24, branch `phase-12/themes-chicken`): `src/themes.js`
   (`DEFAULT_THEME`, `THEMES`, `pickTheme` with its fallback), the `theme` option and per-launch `theme`
@@ -456,8 +462,8 @@ steaks through `Shard`'s `sprite`, milk drawn as shapes); `Sprite.fromPixels` an
 - 64-bit art painted procedurally into grids, as the jug is (shapes, shading ramps, highlights), so it stays
   original and editable; each frame layout matches retro's (flap, panic; wick; kick, excited).
 - Phases: the theme model, the option and override, the demo menu, and the 64-bit chicken with its feathers (done);
-  1. the 64-bit jug with its shards and wick flame; 2. the 64-bit cow with its bubble, steaks and milk (paint them
-  with `src/art/paint.js`, add a `'64bit'` entry to `Jug.themes` / `Cow.themes`).
+  the 64-bit jug with its shards and wick flame (done); 1. the 64-bit cow with its bubble, steaks and milk (paint
+  with `src/art/paint.js`, add a `'64bit'` entry to `Cow.themes`).
 - Tests per phase: theme resolution (option, override, fallback), the same on-screen size in both themes, art grids
   well formed, the demo menu switching live; each new character looked at frame by frame in a real browser beside
   its retro version.
