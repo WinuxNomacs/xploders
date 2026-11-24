@@ -158,6 +158,7 @@ Jug.defaults.scale = 3 // change the default for every jug
 | `spin`   | `0.05`       | Tumble speed, radians per 1/60 s; it tumbles the way it was thrown   |
 | `shards` | `12`         | Shards in the explosion (they count towards `maxParticles`)          |
 | `burst`  | `'fireball'` | Burst style                                                          |
+| `burstSize` | `3`      | How big the burst is: `1` is a rocket's burst; `3` spreads it three times as far, with flames and smoke three times as big |
 
 The `'fireball'` burst works for rockets too (`burst: 'fireball'`). It uses its own fire colours, not `hue`. Its
 smoke is grey, drawn over the page, so it shows on light and dark backgrounds.

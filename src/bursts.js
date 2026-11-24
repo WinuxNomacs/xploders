@@ -13,6 +13,7 @@ import { Flame, Glow, Smoke } from './fireball.js'
  * @property {import('./options.js').Options} options
  * @property {import('./random.js').Random} random
  * @property {boolean} [calm] reduced motion is in effect: no flashes
+ * @property {number} [size] scales how far the burst spreads (and a fireball's flames and smoke); 1 by default
  *
  * @typedef {(c: BurstContext) => import('./engine.js').ParticleLike[]} Burst
  */
@@ -22,8 +23,8 @@ import { Flame, Glow, Smoke } from './fireball.js'
  * @param {BurstContext} c
  * @param {Partial<import('./particle.js').ParticleInit>} [overrides]
  */
-function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
-  return new Particle({
+function particle({ x, y, hue, options: o, random: r, size = 1 }, overrides = {}) {
+  const init = {
     x,
     y,
     angle: r.range(0, Math.PI * 2),
@@ -37,7 +38,9 @@ function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
     lineWidth: inRange(r, o.lineWidth.explosion),
     flicker: r.int(0, 100) <= o.flickering,
     ...overrides,
-  })
+  }
+  // Distance travelled is proportional to speed (friction is a fixed ratio per step).
+  return new Particle({ ...init, speed: init.speed * size })
 }
 
 /** @type {Record<import('./options.js').BurstStyle, Burst>} */
@@ -79,21 +82,23 @@ export const bursts = {
   // Under reduced motion there is no flash of light.
   fireball: (c) => {
     const r = c.random
+    const s = c.size ?? 1
     const smoke = Math.floor(c.count * 0.15)
     const embers = Math.floor(c.count * 0.25)
     const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 0 : 1))
     return [
-      ...(c.calm ? [] : [new Glow(c.x, c.y, 120)]),
+      ...(c.calm ? [] : [new Glow(c.x, c.y, 120 * s)]),
       ...Array.from(
         { length: flames },
         () =>
           new Flame({
-            x: c.x + r.range(-10, 10),
-            y: c.y + r.range(-10, 10),
+            x: c.x + r.range(-10, 10) * s,
+            y: c.y + r.range(-10, 10) * s,
             angle: r.range(0, Math.PI * 2),
-            speed: r.range(1, 7),
-            radius: r.range(14, 28),
+            speed: r.range(1, 7) * s,
+            radius: r.range(14, 28) * s,
             life: r.int(45, 80),
+            buoyancy: Flame.BUOYANCY * s,
           }),
       ),
       ...Array.from({ length: embers }, () =>
@@ -110,13 +115,13 @@ export const bursts = {
         { length: smoke },
         () =>
           new Smoke({
-            x: c.x + r.range(-35, 35),
-            y: c.y + r.range(-30, 5),
+            x: c.x + r.range(-35, 35) * s,
+            y: c.y + r.range(-30, 5) * s,
             delay: r.int(25, 45),
             life: r.int(60, 90),
-            drift: r.range(-0.6, 0.6),
-            rise: r.range(0.4, 0.9),
-            radius: r.range(16, 26),
+            drift: r.range(-0.6, 0.6) * s,
+            rise: r.range(0.4, 0.9) * s,
+            radius: r.range(16, 26) * s,
           }),
       ),
     ]

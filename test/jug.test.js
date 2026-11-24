@@ -231,3 +231,37 @@ describe('Shard', () => {
     expect(steps).toBeLessThanOrEqual(110)
   })
 })
+
+describe('Jug fireball size', () => {
+  /** @param {number | undefined} size */
+  const make = (size) =>
+    bursts.fireball({ x: 0, y: 0, hue: 0, count: 50, options: defaultOptions(), random: new Random(1), size })
+  /** @param {any[]} list @param {Function} cls */
+  const find = (list, cls) => list.find((p) => p instanceof cls)
+
+  it('scales the fireball glow, flames and smoke by the burst size', () => {
+    const one = make(undefined)
+    const three = make(3)
+    expect(find(three, Glow).maxRadius).toBe(find(one, Glow).maxRadius * 3)
+    expect(find(three, Flame).radius0).toBeCloseTo(find(one, Flame).radius0 * 3)
+    expect(find(three, Smoke).radius0).toBeCloseTo(find(one, Smoke).radius0 * 3)
+  })
+
+  it('makes a jug fireball three times as big as a rocket one by default', () => {
+    /** @type {any[][]} */
+    const calls = []
+    const engine = { burst: (/** @type {any[]} */ ...a) => calls.push(a), addParticles() {} }
+    const jug = new Jug({
+      x: 100,
+      y: 500,
+      target: { x: 100, y: 100 },
+      size: { width: 800, height: 600 },
+      hue: 0,
+      options: defaultOptions(),
+      random: new Random(1),
+    })
+    jug.explode(/** @type {any} */ (engine))
+    expect(Jug.defaults.burstSize).toBe(3)
+    expect(calls[0][4]).toBe(3)
+  })
+})

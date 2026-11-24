@@ -263,8 +263,9 @@ export class Engine {
    * @param {number} y
    * @param {number} hue
    * @param {import('./options.js').BurstStyle} [style] defaults to the `burst` option
+   * @param {number} [size] how far it spreads, 1 by default
    */
-  burst(x, y, hue, style) {
+  burst(x, y, hue, style, size = 1) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return
     const o = this.options
     const choice = style ?? (Array.isArray(o.burst) ? this.random.pick(o.burst) : o.burst)
@@ -272,7 +273,7 @@ export class Engine {
     const count = Math.min(Math.floor(o.particles), this.capacity())
     if (count <= 0) return
     // A burst may add a few non-particle pieces (a fireball's glow): trim to fit.
-    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random, calm: this.calm }).slice(0, this.capacity()))
+    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random, calm: this.calm, size }).slice(0, this.capacity()))
   }
 
   /**

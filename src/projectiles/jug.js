@@ -9,6 +9,7 @@ import { palette, frames } from '../art/jug.js'
  * @property {number} [scale] CSS px per sprite pixel
  * @property {number} [spin] tumble speed, rad/step (the direction follows the throw)
  * @property {number} [shards] stoneware pieces in the explosion
+ * @property {number} [burstSize] how big the burst is: 1 is a rocket's size
  * @property {import('../options.js').BurstStyle} [burst] burst style, 'fireball' by default
  */
 
@@ -27,6 +28,7 @@ export class Jug extends Projectile {
     scale: 2,
     spin: 0.05,
     shards: 12,
+    burstSize: 3,
   })
 
   /** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
@@ -43,6 +45,7 @@ export class Jug extends Projectile {
     this.scale = scale
     this.shardCount = init.shards ?? d.shards
     this.burst = init.burst ?? 'fireball'
+    this.burstSize = init.burstSize ?? d.burstSize
     // Tumble forward, the way it was thrown.
     const direction = this.vx > 0 ? 1 : this.vx < 0 ? -1 : r.next() < 0.5 ? 1 : -1
     this.spin = direction * (init.spin ?? d.spin) * r.range(0.7, 1.3)
@@ -83,7 +86,7 @@ export class Jug extends Projectile {
 
   /** @param {import('../engine.js').Engine} engine */
   explode(engine) {
-    engine.burst(this.x, this.y, this.hue, this.burst)
+    engine.burst(this.x, this.y, this.hue, this.burst, this.burstSize)
     engine.addParticles(
       Array.from({ length: this.shardCount }, () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random })),
     )
