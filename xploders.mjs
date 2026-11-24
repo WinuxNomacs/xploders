@@ -1132,6 +1132,7 @@ __name(crackleSparks, "crackleSparks");
 // src/engine.js
 var STEP_MS = 1e3 / 60;
 var MAX_FRAME_MS = 250;
+var MAX_PENDING_STEPS = 1e4;
 var _Engine = class _Engine {
   /**
    * @param {HTMLCanvasElement} canvas
@@ -1167,6 +1168,7 @@ var _Engine = class _Engine {
     this.particles = [];
     this.width = 0;
     this.height = 0;
+    this.trailDpr = 1;
     this.running = false;
     this.autoLaunch = false;
     this.launchClock = 0;
@@ -1174,6 +1176,9 @@ var _Engine = class _Engine {
     this.accumulator = 0;
     this.lastTime = 0;
     this.pendingSteps = 0;
+    this.visible = true;
+    this.idleSteps = 0;
+    this.drewDebug = false;
     this.frameId = null;
     this.onEmpty = null;
     this.tick = this.tick.bind(this);
@@ -1187,17 +1192,18 @@ var _Engine = class _Engine {
     const dpr = globalThis.devicePixelRatio || 1;
     this.width = Math.max(0, width);
     this.height = Math.max(0, height);
+    this.trailDpr = this.options.trailResolution === "half" ? Math.min(dpr, Math.max(1, dpr / 2)) : dpr;
     for (
-      const [c, ctx] of
+      const [c, ctx, ratio] of
       /** @type {const} */
       [
-        [this.canvas, this.ctx],
-        [this.trail, this.trailCtx]
+        [this.canvas, this.ctx, dpr],
+        [this.trail, this.trailCtx, this.trailDpr]
       ]
     ) {
-      c.width = Math.round(this.width * dpr);
-      c.height = Math.round(this.height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.width = Math.round(this.width * ratio);
+      c.height = Math.round(this.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
     this.options.boundaries.width = this.width;
     this.options.boundaries.height = this.height;
@@ -1232,16 +1238,37 @@ var _Engine = class _Engine {
       while (this.accumulator >= STEP_MS) {
         this.step();
         this.accumulator -= STEP_MS;
-        this.pendingSteps++;
+        this.pendingSteps = Math.min(this.pendingSteps + 1, MAX_PENDING_STEPS);
+        this.idleSteps = this.empty ? this.idleSteps + 1 : 0;
       }
-      if (this.pendingSteps > 0) this.draw(this.pendingSteps);
+      if (this.pendingSteps > 0 && this.shouldDraw()) {
+        this.draw(this.pendingSteps);
+        this.pendingSteps = 0;
+      }
     } catch (error) {
       console.error("xploders: a frame failed", error);
       this.accumulator = 0;
+      this.pendingSteps = 0;
     }
-    this.pendingSteps = 0;
     if (this.running) this.frameId = this.raf(this.tick);
     if (this.empty && this.onEmpty) this.onEmpty();
+  }
+  /**
+   * Whether a frame would show anything new: not while the canvas is out of view,
+   * nor once the sky has been empty long enough for its trails to fade out (unless
+   * the boundaries outline is, or was last, showing). Skipped steps are drawn later,
+   * so the trails fade by the same amount either way.
+   */
+  shouldDraw() {
+    if (!this.visible) return false;
+    if (this.options.boundaries.debug || this.drewDebug) return true;
+    return !(this.empty && this.idleSteps > this.fadeSteps());
+  }
+  /** Steps for a trail to fade below one 8-bit level at the `opacity` option's rate. */
+  fadeSteps() {
+    const o = this.options.opacity;
+    if (!(o > 0) || o >= 1) return 1;
+    return Math.ceil(Math.log(1 / 256) / Math.log(1 - o)) + 1;
   }
   /** One fixed 1/60 s step of the whole show. */
   step() {
@@ -1382,8 +1409,10 @@ var _Engine = class _Engine {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.drawImage(this.trail, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this.trail, 0, 0, this.canvas.width, this.canvas.height);
     ctx.restore();
+    this.drewDebug = o.boundaries.debug;
     if (o.boundaries.debug) {
       const a = this.targetArea();
       ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
@@ -1399,8 +1428,10 @@ var _Engine = class _Engine {
    * @param {'trail' | 'sprite'} layer
    */
   drawLayer(ctx, layer) {
-    const mine = this.particles.filter((p) => (p.layer ?? "trail") === layer);
-    let failed = this.drawParticles(ctx, mine.filter((p) => p.behind));
+    const behind = [];
+    const front = [];
+    for (const p of this.particles) if ((p.layer ?? "trail") === layer) (p.behind ? behind : front).push(p);
+    let failed = this.drawParticles(ctx, behind);
     for (const p of this.projectiles) {
       if (p.layer !== layer) continue;
       try {
@@ -1410,7 +1441,7 @@ var _Engine = class _Engine {
         this.projectiles = this.projectiles.filter((q) => q !== p);
       }
     }
-    failed += this.drawParticles(ctx, mine.filter((p) => !p.behind));
+    failed += this.drawParticles(ctx, front);
     if (failed) this.particles = this.particles.filter((p) => !p.dead);
   }
   /**
@@ -1461,7 +1492,8 @@ function defaultOptions() {
     maxParticles: 4e3,
     maxProjectiles: 100,
     mouse: { click: false, move: false, max: 1, projectile: "rocket" },
-    reducedMotion: "auto"
+    reducedMotion: "auto",
+    trailResolution: "full"
   };
 }
 __name(defaultOptions, "defaultOptions");
@@ -2616,6 +2648,13 @@ var _Xploders = class _Xploders {
       });
       this.resizeObserver.observe(this.container);
     }
+    this.visibilityObserver = null;
+    if (typeof IntersectionObserver === "function") {
+      this.visibilityObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) this.engine.visible = entry.isIntersecting;
+      });
+      this.visibilityObserver.observe(this.canvas);
+    }
   }
   /**
    * Make a projectile type available to `launch` by name.
@@ -2668,6 +2707,8 @@ var _Xploders = class _Xploders {
     if (dispose) {
       this.resizeObserver?.disconnect();
       this.resizeObserver = null;
+      this.visibilityObserver?.disconnect();
+      this.visibilityObserver = null;
       this.pointer.dispose();
       this.reducedMotionQuery?.removeEventListener?.("change", this.syncMotion);
       if (this.ownsCanvas) this.canvas.remove();
@@ -2732,7 +2773,9 @@ var _Xploders = class _Xploders {
   }
   /** @param {XplodersOptions} options merged into the live options */
   updateOptions(options) {
+    const trailResolution = this.options.trailResolution;
     deepMerge(this.options, options);
+    if (this.options.trailResolution !== trailResolution) this.engine.resize(this.engine.width, this.engine.height);
     this.pointer.sync();
     this.syncMotion();
     return this;
