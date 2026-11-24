@@ -386,6 +386,12 @@ idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same with
   mid-flight, chickens could cross the whole window, cows start anywhere along the bottom. Fixed in the bench: both
   aim 250 px up from a start near their target, launching stops before the scene ends, and measuring starts after
   150 steps; in a 1704x1306 window at DPR 1.5 every cow (11) and chicken (16) launched explodes.
+- The user's `?trails=half` run, 2026-11-24, same browser and window (the cow and chicken scenes still the earlier
+  versions, as in the full run it compares with), frames/s full against half: many sparks 47.5 against 138.8;
+  fireworks show 110 against 165 (the display's limit); Saturn/shapes/animals 88 against 165; jug fireballs 75
+  against 59.5; cows 165 against 112; chickens 165 against 113. JavaScript time in the cow and chicken scenes
+  rose from about 2 to 6.7 ms, so scaling the half-size layer up costs Firefox a few ms a frame, which only pays
+  where many sparks are drawn on that layer. Mixed, so `'full'` stays the default unless the user decides otherwise.
 
 ### Candidates (each measured, kept only if it looks the same)
 
