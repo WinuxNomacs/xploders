@@ -938,7 +938,7 @@ var animals = {
 var GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 var FIREBALL_SPEED = 6;
 var SATURN_BALL = 4;
-var SATURN_RING = 9;
+var SATURN_RING = 11.25;
 var SHAPE_SPEED = 8;
 function particle({ x, y, hue, options: o, random: r, size = 1 }, overrides = {}) {
   const init = {
@@ -1043,10 +1043,11 @@ var bursts = {
   }, "fireball"),
   // A ball of sparks in the launch colour inside one flattened, tilted ring in the
   // opposite colour. Shared friction keeps the ball round and the ring an ellipse.
+  // The ring gets twice the ball's share again, so it reads as a dense band.
   saturn: /* @__PURE__ */ __name((c) => {
     const r = c.random;
     const ball = Math.max(1, Math.round(c.count * 0.55));
-    const ring = Math.max(0, c.count - ball);
+    const ring = Math.max(0, 2 * (c.count - ball));
     const decay = inRange(r, c.options.decay);
     const ringHue = (c.hue + 180) % 360;
     const tilt = r.range(-0.6, 0.6);
