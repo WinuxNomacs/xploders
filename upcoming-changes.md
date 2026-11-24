@@ -2,7 +2,8 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Extras (sound, pointer launch, reduced motion, demo site)
+- **Up next:** 1. Extras: pointer launch, reduced motion, demo site
+- **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
 
@@ -203,13 +204,65 @@ are added to the page, so canvas and container targets both work. Cost of the ex
 - Measure the trail-layer copy cost (above).
 - Demo: Chicken button, plus a flight choice (random, rise, cross).
 
-## 1. Extras
+## 1. Extras: pointer launch, reduced motion, demo site
 
-- Sounds for fireworks: opt-in, lazy-loaded, user-supplied files allowed (not for the chicken: user, 2026-11-23).
-- Pointer/touch launch at a point.
-- Respect `prefers-reduced-motion`.
-- More projectiles; projectile extras if wanted (spin, explode on a timer).
-- Demo/docs site on GitHub Pages (workflow triggered by hand only).
+Planned 2026-11-23. Branch `phase-3/extras`.
+
+### Decisions (user, 2026-11-23)
+
+- **Pointer launch listens on the canvas only**, as fireworks-js does: drop-in compatible; a click-through overlay
+  (`pointer-events: none`) simply gets no pointer launch, and page buttons stay usable.
+- **Reduced motion calms the show by default**: no auto-launch, no flickering sparks, no chicken flash; `launch()`
+  and pointer launch still work.
+- **Demo site**: the user makes the repo public; the site is built into a `gh-pages` branch that updates only when
+  the user pushes it. No workflow file added.
+- **Projectile extras (spin, fuse) and new objects: not now**; a later phase shaped when the next object is known.
+- **No sound at all for now** (user, 2026-11-23): the fireworks-js `sound` option is not supported; it is ignored
+  if passed. Revisit only if asked.
+
+### Pointer
+
+- fireworks-js options: `mouse: {click: false, move: false, max: 1}`.
+  - `click`: while the pointer is held on the canvas, rockets launch towards it, keeping up to `max` in flight.
+  - `move`: auto-launched rockets aim at the pointer's last position on the canvas.
+- Fixes over fireworks-js: position from `getBoundingClientRect` (fireworks-js uses `pageX - offsetLeft`, wrong for
+  nested or scrolled canvases); pointer capture, so releasing outside the canvas ends the hold (fireworks-js can get
+  stuck launching); `touch-action: none` on the canvas only while `click` is on, so dragging doesn't scroll.
+- Ours: `mouse.projectile` (default `'rocket'`; `'chicken'` works) and `launchAt(x, y, type?, init?)` for code that
+  wants a firework at a point (fireworks-js issue #101 asks for this).
+
+### Reduced motion
+
+- Option `reducedMotion: 'auto' | 'always' | 'ignore'` (default `'auto'`). Calm mode applies under `'auto'` when
+  `prefers-reduced-motion: reduce` matches (followed live as the setting changes), or always under `'always'`.
+- Calm mode: no auto-launch; sparks don't flicker (`flickering` treated as 0, crackle without flicker); the chicken
+  doesn't flash while panicking. Manual and pointer launches still work.
+
+### Demo site
+
+1. **Pre-public review** (global rule), before the user flips visibility: secrets and personal data across the
+   whole history, including any binary or archive (none so far). Commit emails already checked 2026-11-23: GitHub
+   noreply addresses only. Findings reported; rewriting history, if ever needed, is the user's call.
+2. The user makes the repo public (GitHub settings).
+3. `npm run build:site` writes `site/` (git-ignored): the demo page loading `dist/xploders.mjs`, the dist files, a
+   short "how to use" panel with links to the README and npm, and `.nojekyll`.
+4. `npm run publish:site` commits `site/` to the `gh-pages` branch through a git worktree; nothing is pushed.
+   The user pushes `gh-pages` and, once, sets Pages to deploy from that branch. GitHub then runs its own
+   `pages-build-deployment` on each push of `gh-pages` (Actions minutes are free on a public repo).
+
+### What can go wrong
+
+- `matchMedia` missing (old browsers, Node): treated as no reduced-motion preference.
+- Pointer capture unsupported: falls back to ending the hold on `pointerup`/`pointercancel`/`pointerleave`.
+- `stop(true)`: also removes pointer listeners and the media-query listener.
+
+### Tests
+
+- Unit (Node, fake events): `click` launches towards the pointer up to `max` and stops on release or cancel; `move` aims auto-launches;
+  `launchAt`; calm mode (auto-launch off, no flicker, no flash) and `'ignore'`/`'always'`; dispose removes listeners.
+- Browser: real pointer drags on the demo launch at the pointer; `emulateMedia({reducedMotion: 'reduce'})` calms
+  the demo, live; the built site loads from a static server with no errors.
+- Demo: a Pointer toggle.
 
 ## Decisions
 
