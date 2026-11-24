@@ -2,11 +2,19 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Saturn and Shapes bursts (details below)
-- **Then:** 2. Animals burst; 3. Performance review (after the planned updates)
+- **Up next:** 1. Animals burst (details below)
+- **Then:** 2. Performance review (after the planned updates)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Saturn and Shapes bursts** (2026-11-24, branch `phase-9/saturn-shapes`): outline generators resampled evenly by
+  arc length (`src/shapes.js`: ellipse, polygon, spiral, smiley, heart, star with eye points), the `saturn` and
+  `shapes` bursts with one shared decay so they fade whole, the star's eyes as small fireworks in a contrasting hue
+  (`src/bursts.js`), both in `BurstStyle` and the demo's Burst menu and Mix. Tests: `test/shapes.test.js` (even
+  spacing, every outline within radius 1, heart and smiley orientation, a shapes burst keeping its form as it
+  moves, the star's eyes, Saturn's opposite-hue flattened ring outside the ball). Seen in headless Chromium: all six
+  shapes and Saturn read clearly by about step 20-30, when the sparks' trails have shortened. Plan kept below.
 
 - **Demo boundaries editor** (2026-11-24, branch `phase-8/boundaries-editor`): optional `right` and `bottom`
   margins on `boundaries` (null keeps fireworks-js's box), one `targetArea()` for launch targets and the debug
@@ -255,7 +263,7 @@ The demo also moves `y` below the controls panel whenever the panel resizes.
   targets; browser, the sliders show only while checked and move the box, a drag on a corner resizes it without
   launching, a click inside still launches, the top stops following the panel once set by hand.
 
-## 1. Saturn and Shapes bursts
+## Saturn and Shapes bursts (done)
 
 Requests (`new.md`, 2026-11-24): "Add a burst type called Saturn that explodes a spehere of one color inside
 exploding rings of another color"; "Add a burst type called Shapes that explodes fireworks in random shapes,
@@ -264,21 +272,34 @@ ellipsoids and geometries".
 Builds on: burst styles in `src/bursts.js` (`ring` already keeps a circle by sharing one speed; the fireball's
 sunflower spread fills a disc evenly), the `burst` option and the demo's Burst menu.
 
-Proposed: `'saturn'`, a filled ball of particles in the launch hue inside one or more rings in a second hue, rings
-tilted (drawn as ellipses: flattened circles at an angle); `'shapes'`, particles placed along an outline picked at
-random (ellipse, star, heart, triangle, square, spiral...), sized by launch speed so the shape grows and keeps its
-form. Both in the Burst menu and in its "mix".
+### Decisions (user, 2026-11-24)
 
-Open decisions (to ask when planning):
-- Saturn: how the second colour is chosen (opposite on the colour wheel, or random), and one ring or several.
-- Shapes: which shapes are in the set, and whether they are flat outlines or filled.
+- **Saturn: one tilted ring in the opposite colour** (180 degrees round the colour wheel from the ball's launch hue).
+- **Shapes: all of them**, picked at random per burst: tilted ellipses; polygons (triangle to hexagon); a spiral; a
+  smiley; a heart; a five-pointed star whose **eyes are made of small fireworks**.
+- **Outlines**, not filled.
 
-## 2. Animals burst
+### Design
+
+- Shapes keep their form because every spark shares one friction and one gravity: a spark's position is its launch
+  velocity times the same factor, so launching each at a point of the outline (angle and speed from the point)
+  grows the outline uniformly as it drifts down. One shared decay per burst so the whole shape fades together.
+- `src/shapes.js`: outline generators returning points evenly spaced along the outline (resampled by arc length),
+  within radius 1: `ellipse`, `polygon`, `spiral`, `smiley`, `heart`, `star`. The star's eyes are two tiny bursts:
+  sparks launched at each eye's point plus a small random velocity, so each eye opens as a little firework that
+  moves with the star, in a contrasting gold.
+- `src/bursts.js`: `saturn` (a filled ball, about 55% of the sparks in a sunflower spread, inside a flattened ring at
+  a random tilt, the rest), `shapes` (one shape at random); both in `BurstStyle`, the demo's Burst menu and its Mix.
+- Tests: each outline's points evenly spaced and within radius 1; a shapes burst keeps its form as it moves (spark
+  positions stay proportional to their launch points); Saturn's ring in the opposite hue and outside the ball, its
+  ring flattened; the star's eyes; counts fit `count`.
+
+## 1. Animals burst
 
 Request (`new.md`, 2026-11-24): "Add a burst type called Animals that explodes fireworks in the shapes of random zoo
 animals".
 
-Builds on: the Shapes burst (phase 1), whose outline-to-particles code it reuses with animal outlines.
+Builds on: the Shapes burst (done), whose outline-to-particles code it reuses with animal outlines.
 
 Proposed: `'animals'`, outlines drawn by us as point lists (original art, per the repo rules), one picked at random
 per burst; in the Burst menu.
@@ -286,7 +307,7 @@ per burst; in the Burst menu.
 Open decisions (to ask when planning): which animals (for example elephant, giraffe, lion, monkey, penguin), and
 whether an outline faces a random way.
 
-## 3. Performance review
+## 2. Performance review
 
 Request (`new.md`, 2026-11-24): "Once the current planned updates are complete. Plan a performance review to improve
 rendering performance and reduce unnecessary cpu/gpu impact."
@@ -295,7 +316,7 @@ Builds on: the measurements so far (in Done): step + draw per particle count, th
 cost (large additive soft dots are fill-rate bound: 10 jug fireballs about 76 ms per frame in headless Chromium at
 DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src/engine.js`).
 
-Proposed, to plan once phases 1-2 are done: profile the demo in a real GPU-backed browser as well as headless
+Proposed, to plan once phase 1 is done: profile the demo in a real GPU-backed browser as well as headless
 (headless uses software rendering, so its numbers are pessimistic); measure where frame time goes (trail fade,
 additive flames, sprite draws, particle updates); candidates to weigh: idling the loop when the sky is empty and
 auto-launch is off, a lower-resolution trail layer at high DPR, capping fireball fill (fewer, cached bigger dots),
