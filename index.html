@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>xploders demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #05060f;
+        color: #eee;
+        font: 14px system-ui, sans-serif;
+        overflow: hidden;
+      }
+      #sky {
+        position: fixed;
+        inset: 0;
+      }
+      .controls {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      button,
+      select {
+        font: inherit;
+        padding: 6px 12px;
+        border: 1px solid #444;
+        border-radius: 6px;
+        background: #151826;
+        color: inherit;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #22263a;
+      }
+      .howto {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        max-width: min(520px, calc(100% - 32px));
+        background: #151826e6;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 8px 12px;
+      }
+      .howto summary {
+        cursor: pointer;
+      }
+      .howto pre {
+        overflow-x: auto;
+        background: #0b0d18;
+        padding: 8px;
+        border-radius: 6px;
+      }
+      .howto a {
+        color: #9ecbff;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        background: #151826cc;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sky"></div>
+    <div class="controls">
+      <button id="auto" type="button" aria-pressed="true">Auto: on</button>
+      <button id="fireworks" type="button">Fireworks</button>
+      <button id="chicken" type="button">Chicken</button>
+      <button id="clear" type="button">Clear</button>
+      <button id="pointer" type="button" aria-pressed="false">Pointer: off</button>
+      <label
+        >Burst
+        <select id="burst">
+          <option value="peony">Peony</option>
+          <option value="ring">Ring</option>
+          <option value="willow">Willow</option>
+          <option value="crackle">Crackle</option>
+          <option value="mix">Mix</option>
+        </select>
+      </label>
+      <label
+        >Chicken flight
+        <select id="flight">
+          <option value="random">Random</option>
+          <option value="rise">Rise</option>
+          <option value="cross">Cross</option>
+        </select>
+      </label>
+      <label>Intensity <input id="intensity" type="range" min="0" max="80" value="30" /></label>
+      <label><input id="debug" type="checkbox" /> Boundaries</label>
+    </div>
+    <details class="howto">
+      <summary>How to use</summary>
+      <p>Turn Pointer on, then hold or drag on the sky to launch at the pointer.</p>
+      <pre><code>import { Xploders } from 'xploders'
+
+const show = new Xploders(document.querySelector('.sky'))
+show.start()
+show.launch('chicken')</code></pre>
+      <p>Options, methods and the chicken: <a href="https://github.com/WinuxNomacs/xploders#readme">README on GitHub</a>.</p>
+    </details>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
