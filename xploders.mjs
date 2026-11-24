@@ -99,6 +99,149 @@ function inRange(random, { min, max }, integer = false) {
   return integer ? random.int(min, max) : random.range(min, max);
 }
 
+// src/fireball.js
+var _Flame = class _Flame {
+  /** @param {FlameInit} init */
+  constructor({ x, y, angle, speed, radius, life }) {
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.radius0 = radius;
+    this.life = life;
+    this.age = 0;
+    this.dead = false;
+    this.layer = "trail";
+  }
+  /** @returns {number} 0 at birth, 1 at death */
+  get t() {
+    return Math.min(1, this.age / this.life);
+  }
+  get hue() {
+    return 55 * (1 - this.t);
+  }
+  get lightness() {
+    return 92 - 50 * this.t;
+  }
+  get radius() {
+    return this.radius0 * (0.6 + 0.9 * this.t);
+  }
+  get alpha() {
+    return (1 - this.t) ** 1.5;
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.vx *= _Flame.FRICTION;
+    this.vy = this.vy * _Flame.FRICTION - _Flame.BUOYANCY;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.age++;
+    if (this.age >= this.life) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const r = this.radius;
+    const colour = `${this.hue}, 100%, ${this.lightness}%`;
+    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+    g.addColorStop(0, `hsla(${colour}, ${this.alpha})`);
+    g.addColorStop(1, `hsla(${colour}, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+};
+__publicField(_Flame, "BUOYANCY", 0.06);
+// upward px/step^2
+__publicField(_Flame, "FRICTION", 0.9);
+var Flame = _Flame;
+var _Glow = class _Glow {
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} radius px when fully swollen
+   */
+  constructor(x, y, radius) {
+    this.x = x;
+    this.y = y;
+    this.maxRadius = radius;
+    this.age = 0;
+    this.dead = false;
+    this.layer = "trail";
+  }
+  get t() {
+    return Math.min(1, this.age / _Glow.LIFE);
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.age++;
+    if (this.age >= _Glow.LIFE) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const t = this.t;
+    const r = this.maxRadius * (1 - (1 - t) ** 3) + 1;
+    const a = 0.55 * (1 - t);
+    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+    g.addColorStop(0, `hsla(50, 100%, 90%, ${a})`);
+    g.addColorStop(0.4, `hsla(30, 100%, 60%, ${a * 0.6})`);
+    g.addColorStop(1, "hsla(15, 100%, 50%, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+};
+__publicField(_Glow, "LIFE", 28);
+var Glow = _Glow;
+var _Smoke = class _Smoke {
+  /** @param {SmokeInit} init */
+  constructor({ x, y, delay, life, drift, rise, radius }) {
+    this.x = x;
+    this.y = y;
+    this.delay = delay;
+    this.life = life;
+    this.vx = drift;
+    this.vy = -rise;
+    this.radius0 = radius;
+    this.age = -delay;
+    this.dead = false;
+    this.layer = "sprite";
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.age++;
+    if (this.age > 0) {
+      this.vx *= 0.98;
+      this.x += this.vx;
+      this.y += this.vy;
+    }
+    if (this.age >= this.life) this.dead = true;
+    return false;
+  }
+  get alpha() {
+    if (this.age <= 0) return 0;
+    return _Smoke.MAX_ALPHA * Math.min(1, this.age / 12) * (1 - this.age / this.life);
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const a = this.alpha;
+    if (a <= 0) return;
+    const r = this.radius0 * (1 + 1.5 * this.age / this.life);
+    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+    g.addColorStop(0, `hsla(20, 6%, 38%, ${a})`);
+    g.addColorStop(1, "hsla(20, 6%, 38%, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+};
+__publicField(_Smoke, "MAX_ALPHA", 0.35);
+var Smoke = _Smoke;
+
 // src/bursts.js
 function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
   return new Particle({
@@ -145,7 +288,52 @@ var bursts = {
     })
   ),
   // Flickers, then each particle pops into a few tiny sparks near the end.
-  crackle: (c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) }))
+  crackle: (c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })),
+  // A ball of fire: a glow, rising flames that cool from yellow to red, gold
+  // embers, then smoke as the flames die. Its own colours; the hue is unused.
+  fireball: (c) => {
+    const r = c.random;
+    const smoke = Math.floor(c.count * 0.15);
+    const embers = Math.floor(c.count * 0.25);
+    const flames = Math.max(1, c.count - smoke - embers - 1);
+    return [
+      new Glow(c.x, c.y, 120),
+      ...Array.from(
+        { length: flames },
+        () => new Flame({
+          x: c.x + r.range(-10, 10),
+          y: c.y + r.range(-10, 10),
+          angle: r.range(0, Math.PI * 2),
+          speed: r.range(1, 7),
+          radius: r.range(14, 28),
+          life: r.int(45, 80)
+        })
+      ),
+      ...Array.from(
+        { length: embers },
+        () => particle(c, {
+          hue: r.range(25, 45),
+          speed: r.range(2, 9),
+          brightness: r.range(60, 75),
+          decay: r.range(0.02, 0.04),
+          gravity: c.options.gravity * 0.6,
+          flicker: true
+        })
+      ),
+      ...Array.from(
+        { length: smoke },
+        () => new Smoke({
+          x: c.x + r.range(-35, 35),
+          y: c.y + r.range(-30, 5),
+          delay: r.int(25, 45),
+          life: r.int(60, 90),
+          drift: r.range(-0.6, 0.6),
+          rise: r.range(0.4, 0.9),
+          radius: r.range(16, 26)
+        })
+      )
+    ];
+  }
 };
 function crackleSparks(parent, r, max) {
   return Array.from(
@@ -168,16 +356,16 @@ function crackleSparks(parent, r, max) {
 }
 
 // src/sprite.js
-function parsePixels(frames, palette2) {
-  if (frames.length === 0) throw new Error("xploders: a sprite needs at least one frame");
-  const frameHeight = frames[0].length;
-  const frameWidth = frames[0][0]?.length ?? 0;
+function parsePixels(frames2, palette3) {
+  if (frames2.length === 0) throw new Error("xploders: a sprite needs at least one frame");
+  const frameHeight = frames2[0].length;
+  const frameWidth = frames2[0][0]?.length ?? 0;
   if (frameWidth === 0) throw new Error("xploders: empty sprite frame");
-  const width = frameWidth * frames.length;
+  const width = frameWidth * frames2.length;
   const data = new Uint8ClampedArray(width * frameHeight * 4);
   const colours = /* @__PURE__ */ new Map();
-  for (const [ch, css] of Object.entries(palette2)) colours.set(ch, css === null ? null : hexToRgb(css));
-  frames.forEach((rows, f) => {
+  for (const [ch, css] of Object.entries(palette3)) colours.set(ch, css === null ? null : hexToRgb(css));
+  frames2.forEach((rows, f) => {
     if (rows.length !== frameHeight) throw new Error(`xploders: frame ${f} has ${rows.length} rows, expected ${frameHeight}`);
     rows.forEach((row, y) => {
       if (row.length !== frameWidth) {
@@ -196,7 +384,7 @@ function parsePixels(frames, palette2) {
       }
     });
   });
-  return { frameWidth, frameHeight, frames: frames.length, data };
+  return { frameWidth, frameHeight, frames: frames2.length, data };
 }
 function hexToRgb(css) {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(css);
@@ -226,12 +414,12 @@ var Sprite = class _Sprite {
    * @param {number} opts.frames number of frames in the sheet
    * @param {number} [opts.fps]
    */
-  constructor(image, { frameWidth, frameHeight, frames, fps = 8 }) {
+  constructor(image, { frameWidth, frameHeight, frames: frames2, fps = 8 }) {
     this.image = image;
     this.flashImage = null;
     this.frameWidth = frameWidth;
     this.frameHeight = frameHeight;
-    this.frames = frames;
+    this.frames = frames2;
     this.fps = fps;
     this.pixels = null;
   }
@@ -242,17 +430,17 @@ var Sprite = class _Sprite {
    * @param {Record<string, string | null>} palette
    * @param {number} [fps]
    */
-  static fromPixels(frames, palette2, fps = 8) {
-    const pixels = parsePixels(frames, palette2);
-    const sprite2 = new _Sprite(null, { ...pixels, fps });
-    sprite2.pixels = pixels;
-    return sprite2;
+  static fromPixels(frames2, palette3, fps = 8) {
+    const pixels = parsePixels(frames2, palette3);
+    const sprite3 = new _Sprite(null, { ...pixels, fps });
+    sprite3.pixels = pixels;
+    return sprite3;
   }
   /** Makes the sheet (and its flash silhouette) from pixels, once. */
   build() {
     if (this.image || !this.pixels) return;
-    const { frameWidth, frameHeight, frames, data } = this.pixels;
-    const w = frameWidth * frames;
+    const { frameWidth, frameHeight, frames: frames2, data } = this.pixels;
+    const w = frameWidth * frames2;
     const sheet = createCanvas(w, frameHeight);
     const flash = createCanvas(w, frameHeight);
     const white = new Uint8ClampedArray(data);
@@ -284,8 +472,9 @@ var Sprite = class _Sprite {
    * @param {boolean} [opts.flip] mirror horizontally
    * @param {boolean} [opts.flash] draw the white silhouette instead
    * @param {number} [opts.alpha]
+   * @param {number} [opts.rotation] radians, clockwise, about the centre
    */
-  draw(ctx, frame, x, y, { scale = 1, flip = false, flash = false, alpha = 1 } = {}) {
+  draw(ctx, frame, x, y, { scale = 1, flip = false, flash = false, alpha = 1, rotation = 0 } = {}) {
     this.build();
     const image = flash && this.flashImage ? this.flashImage : this.image;
     if (!image || !isReady(image)) return;
@@ -295,6 +484,7 @@ var Sprite = class _Sprite {
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = alpha;
     ctx.translate(Math.round(x), Math.round(y));
+    if (rotation) ctx.rotate(rotation);
     if (flip) ctx.scale(-1, 1);
     ctx.drawImage(image, frame % this.frames * this.frameWidth, 0, this.frameWidth, this.frameHeight, -Math.round(w / 2), -Math.round(h / 2), w, h);
     ctx.restore();
@@ -493,7 +683,7 @@ var Engine = class {
     const make = bursts[choice] ?? bursts.peony;
     const count = Math.min(Math.floor(o.particles), this.capacity());
     if (count <= 0) return;
-    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }));
+    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }).slice(0, this.capacity()));
   }
   /**
    * Adds particles of any kind (feathers...), as many as fit under `maxParticles`.
@@ -988,6 +1178,270 @@ __publicField(
 __publicField(_Chicken, "sprite", Sprite.fromPixels([...flapFrames, ...panicFrames], palette));
 var Chicken = _Chicken;
 
+// src/art/jug.js
+var palette2 = {
+  ".": null,
+  k: "#2b1e24",
+  // outline
+  B: "#7a3f1d",
+  // brown glaze
+  b: "#a35a2a",
+  // glaze highlight
+  d: "#4f2611",
+  // glaze shade
+  c: "#efe2c0",
+  // cream stoneware
+  h: "#fbf4e0",
+  // cream highlight
+  s: "#c9b48a",
+  // cream shade
+  u: "#2f4fa8",
+  // cobalt lettering
+  m: "#c8281e",
+  // red lettering
+  n: "#b98a4e",
+  // cork
+  N: "#8a6232",
+  // cork shade
+  r: "#d8d0b8",
+  // rag
+  q: "#a39a80",
+  // rag shade
+  R: "#e8401c",
+  // flame edge
+  o: "#ffa21f",
+  // flame
+  y: "#fff27a",
+  // flame core
+  w: "#ffffff"
+  // flame heart
+};
+var WIDTH = 31;
+var CENTER = 15;
+var CORK_ROW = 9;
+var halfWidths = [2, 2, 2, 3, 4, 6, 8, 10, 11, 12, 13, ...Array(16).fill(14), 13, 13, 12, 10];
+var HEIGHT = CORK_ROW + halfWidths.length;
+var GLAZE_END = CORK_ROW + 11;
+var font = {
+  J: ["..#", "..#", "..#", "#.#", ".##"],
+  U: ["#.#", "#.#", "#.#", "#.#", "###"],
+  G: [".##", "#..", "#.#", "#.#", ".##"],
+  O: [".#.", "#.#", "#.#", "#.#", ".#."],
+  B: ["##.", "#.#", "##.", "#.#", "##."],
+  M: ["#.#", "###", "#.#", "#.#", "#.#"],
+  "-": ["...", "...", "###", "...", "..."]
+};
+var lettering = [
+  { text: "JUG-O-", colour: "u", row: 23 },
+  { text: "BOOM", colour: "m", row: 29 }
+];
+var flameA = ["...R...", "..RoR..", ".RoyoR.", ".oywyo.", ".oywyo.", "..oyo..", "...o..."];
+var flameB = ["..R....", ".RoR...", ".Royo..", ".oywyoR", ".oywyo.", "..oyo..", "...o..."];
+var flameC = flameB.map((row) => [...row].reverse().join(""));
+function blank() {
+  return Array.from({ length: HEIGHT }, () => Array(WIDTH).fill("."));
+}
+function paintJug() {
+  const g = blank();
+  halfWidths.forEach((hw, i) => {
+    const y = CORK_ROW + i;
+    const left = CENTER - hw;
+    const right = CENTER + hw;
+    const last = i === halfWidths.length - 1;
+    for (let x = left; x <= right; x++) {
+      if (y < CORK_ROW + 3) {
+        g[y][x] = x === left || x === right ? "k" : x === right - 1 ? "N" : "n";
+        continue;
+      }
+      if (last || x === left || x === right) {
+        g[y][x] = "k";
+        continue;
+      }
+      const drip = y === GLAZE_END && [4, 5, 11, 18, 19, 24].includes(x);
+      const glazed = y < GLAZE_END || drip;
+      if (glazed) g[y][x] = x === left + 1 || x === left + 2 ? "b" : x >= right - 2 ? "d" : "B";
+      else g[y][x] = x === left + 1 ? "h" : x >= right - 2 || y >= HEIGHT - 3 ? "s" : "c";
+    }
+  });
+  for (let x = CENTER - 2; x <= CENTER + 2; x++) g[CORK_ROW + 3][x] = "d";
+  for (const [dy, x] of [
+    [3, 19],
+    [3, 20],
+    [3, 21],
+    [3, 22],
+    [3, 23],
+    [4, 24],
+    [5, 25],
+    [6, 26],
+    [7, 27],
+    [8, 28],
+    [9, 28]
+  ]) {
+    const y = CORK_ROW + dy;
+    g[y][x] = "k";
+    if (g[y][x + 1] === ".") g[y][x + 1] = "d";
+  }
+  g[CORK_ROW - 1][CENTER - 1] = "r";
+  g[CORK_ROW - 1][CENTER] = "q";
+  g[CORK_ROW - 1][CENTER + 1] = "r";
+  g[CORK_ROW - 2][CENTER] = "r";
+  for (const { text, colour, row } of lettering) {
+    const width = text.length * 4 - 1;
+    let x0 = CENTER - Math.floor(width / 2);
+    for (const ch of text) {
+      const glyph = font[
+        /** @type {keyof typeof font} */
+        ch
+      ];
+      glyph.forEach((line, dy) => {
+        for (let dx = 0; dx < 3; dx++) if (line[dx] === "#") g[row + dy][x0 + dx] = colour;
+      });
+      x0 += 4;
+    }
+  }
+  return g;
+}
+function withFlame(jug2, flame) {
+  const g = jug2.map((row) => [...row]);
+  const x0 = CENTER - 3;
+  flame.forEach((line, y) => {
+    for (let dx = 0; dx < line.length; dx++) if (line[dx] !== ".") g[y][x0 + dx] = line[dx];
+  });
+  return g.map((row) => row.join(""));
+}
+var jug = paintJug();
+var frames = [withFlame(jug, flameA), withFlame(jug, flameB), withFlame(jug, flameC)];
+var shardFrames = [
+  ["kB.", "BBb", ".Bk"],
+  [".kB", "kBB", "Bd."],
+  ["Bb.", "dBk", "..."],
+  ["kc.", "cch", ".ck"],
+  [".kc", "kcs", "cs."],
+  ["ch.", "sck", "..."]
+];
+
+// src/shard.js
+var sprite2 = Sprite.fromPixels(shardFrames, palette2);
+var _Shard = class _Shard {
+  /** @param {ShardInit} init */
+  constructor({ x, y, scale, random: r }) {
+    const angle = r.range(0, Math.PI * 2);
+    const speed = r.range(2, 7);
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 2.5;
+    this.scale = scale;
+    this.frame = r.int(0, shardFrames.length - 1);
+    this.rotation = r.range(0, Math.PI * 2);
+    this.spin = r.range(-0.3, 0.3);
+    this.life = r.int(70, 110);
+    this.age = 0;
+    this.dead = false;
+    this.layer = "sprite";
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.vx *= 0.99;
+    this.vy += _Shard.GRAVITY;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.rotation += this.spin;
+    this.age++;
+    if (this.age >= this.life) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const alpha = Math.min(1, (this.life - this.age) / _Shard.FADE_STEPS);
+    sprite2.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation });
+  }
+};
+__publicField(_Shard, "GRAVITY", 0.22);
+// px/step^2
+__publicField(_Shard, "FADE_STEPS", 30);
+var Shard = _Shard;
+
+// src/projectiles/jug.js
+var FLAME_FPS = 12;
+var WICK = 17;
+var _Jug = class _Jug extends Projectile {
+  /** @param {import('../projectile.js').ProjectileInit & JugOptions} init */
+  constructor(init) {
+    const d = _Jug.defaults;
+    const scale = init.scale ?? d.scale;
+    super({ ...init, y: init.y + _Jug.sprite.frameHeight * scale / 2 });
+    const r = init.random;
+    this.layer = /** @type {const} */
+    "sprite";
+    this.scale = scale;
+    this.shardCount = init.shards ?? d.shards;
+    this.burst = init.burst ?? "fireball";
+    const direction = this.vx > 0 ? 1 : this.vx < 0 ? -1 : r.next() < 0.5 ? 1 : -1;
+    this.spin = direction * (init.spin ?? d.spin) * r.range(0.7, 1.3);
+    this.rotation = r.range(-0.3, 0.3);
+  }
+  /** Where the wick flame is now, after the tumble. */
+  get wick() {
+    const reach = WICK * this.scale;
+    return { x: this.x + Math.sin(this.rotation) * reach, y: this.y - Math.cos(this.rotation) * reach };
+  }
+  update() {
+    super.update();
+    this.rotation += this.spin;
+    if (this.age % 3 === 0) this.engine?.addParticles([this.ember()]);
+  }
+  /** A spark off the burning wick, left behind as a trail. */
+  ember() {
+    const r = this.random;
+    const { x, y } = this.wick;
+    return new Particle({
+      x,
+      y,
+      angle: r.range(0, Math.PI * 2),
+      speed: r.range(0.3, 1.2),
+      hue: r.range(25, 45),
+      brightness: r.range(55, 70),
+      decay: r.range(0.05, 0.09),
+      friction: 0.92,
+      gravity: -0.4,
+      // drifts up, like sparks off a flame
+      trail: 3,
+      lineWidth: r.range(1, 2),
+      flicker: true
+    });
+  }
+  /** @param {import('../engine.js').Engine} engine */
+  explode(engine) {
+    engine.burst(this.x, this.y, this.hue, this.burst);
+    engine.addParticles(
+      Array.from({ length: this.shardCount }, () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random }))
+    );
+  }
+  /** Index into `Jug.sprite` for the current step. */
+  get frame() {
+    return Math.floor(this.age * FLAME_FPS / 60) % 3;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    _Jug.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, rotation: this.rotation });
+  }
+};
+/** Defaults for every jug; per launch: `show.launch('jug', 1, {spin: 0})`. */
+__publicField(
+  _Jug,
+  "defaults",
+  /** @type {Required<Omit<JugOptions, 'burst'>>} */
+  {
+    scale: 2,
+    spin: 0.05,
+    shards: 12
+  }
+);
+/** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
+__publicField(_Jug, "sprite", Sprite.fromPixels(frames, palette2));
+var Jug = _Jug;
+
 // src/pointer.js
 var Pointer = class {
   /**
@@ -1086,6 +1540,7 @@ var Pointer = class {
 var registry = /* @__PURE__ */ new Map();
 registry.set("rocket", Rocket);
 registry.set("chicken", Chicken);
+registry.set("jug", Jug);
 var isCanvas = (el) => typeof /** @type {any} */
 el.getContext === "function";
 var Xploders = class {
@@ -1265,10 +1720,15 @@ var index_default = Xploders;
 export {
   Chicken,
   Feather,
+  Flame,
+  Glow,
+  Jug,
   Particle,
   Projectile,
   Random,
   Rocket,
+  Shard,
+  Smoke,
   Sprite,
   Xploders,
   bursts,

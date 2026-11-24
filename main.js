@@ -15,6 +15,7 @@ el('auto').addEventListener('click', () => {
 })
 el('fireworks').addEventListener('click', () => show.launch(5))
 el('chicken').addEventListener('click', () => show.launch('chicken', 1, { flight: el('flight').value }))
+el('jug').addEventListener('click', () => show.launch('jug'))
 el('clear').addEventListener('click', () => show.clear())
 el('pointer').addEventListener('click', () => {
   const on = el('pointer').getAttribute('aria-pressed') !== 'true'
@@ -24,7 +25,7 @@ el('pointer').addEventListener('click', () => {
 })
 el('burst').addEventListener('change', () => {
   const v = el('burst').value
-  show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle'] : /** @type {any} */ (v) })
+  show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle', 'fireball'] : /** @type {any} */ (v) })
 })
 el('intensity').addEventListener('input', () => show.updateOptions({ intensity: Number(el('intensity').value) }))
 el('debug').addEventListener('change', () => show.updateBoundaries({ debug: el('debug').checked }))
