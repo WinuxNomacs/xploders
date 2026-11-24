@@ -3,6 +3,7 @@
 ## Phases (current and upcoming)
 
 - **Up next:** 1. The exploding cow (details below)
+- **Then:** 2. Demo boundaries editor; 3. Saturn and Shapes bursts; 4. Animals burst
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
@@ -176,6 +177,57 @@ steaks, and the demo's launch buttons and click to fire.
   sprite layer) and milk splatters (white droplets that fly out, fall and fade; drawn on the sprite layer so they
   stay white rather than adding up to glare). Under reduced motion: no shake, the bubble still shows.
 - Counts toward `maxParticles` like shards and feathers.
+
+## 2. Demo boundaries editor
+
+Request (`new.md`, 2026-11-24): "In the demo, add sliders for resizing and moving the boundaries when Boundaries is
+checked/enabled. Also allow for the Boundaries box to be resized using the mouse on its corners and borders."
+
+Builds on: the Boundaries checkbox in the demo's controls panel (`debug`), `updateBoundaries`, and the box as the
+engine uses it today (`Engine.launch`, `src/engine.js`): left margin `x`, right margin `2x` (as fireworks-js), top
+`y`, bottom fixed at half the canvas height; `width`/`height` are overwritten with the canvas size on every resize.
+The demo also moves `y` below the controls panel whenever the panel resizes.
+
+Proposed: with Boundaries checked, a panel of sliders (left, right, top, bottom) and drag handles on the box's
+corners and edges on the canvas; a drag on a handle doesn't launch (click to fire skips it).
+
+Open decisions (to ask when planning):
+- Library or demo only: the current fields can't express a free box (the right margin is tied to the left, the
+  bottom is fixed at 50%), so free sliders need new boundary fields in the library (for example `right` and
+  `bottom` margins, defaults keeping today's box) or the demo maps onto only `x` and `y`.
+- Whether the demo still moves the top below the controls panel once the user has set it by hand.
+- Moving the whole box by dragging its middle, or only resizing from corners and edges.
+
+## 3. Saturn and Shapes bursts
+
+Requests (`new.md`, 2026-11-24): "Add a burst type called Saturn that explodes a spehere of one color inside
+exploding rings of another color"; "Add a burst type called Shapes that explodes fireworks in random shapes,
+ellipsoids and geometries".
+
+Builds on: burst styles in `src/bursts.js` (`ring` already keeps a circle by sharing one speed; the fireball's
+sunflower spread fills a disc evenly), the `burst` option and the demo's Burst menu.
+
+Proposed: `'saturn'`, a filled ball of particles in the launch hue inside one or more rings in a second hue, rings
+tilted (drawn as ellipses: flattened circles at an angle); `'shapes'`, particles placed along an outline picked at
+random (ellipse, star, heart, triangle, square, spiral...), sized by launch speed so the shape grows and keeps its
+form. Both in the Burst menu and in its "mix".
+
+Open decisions (to ask when planning):
+- Saturn: how the second colour is chosen (opposite on the colour wheel, or random), and one ring or several.
+- Shapes: which shapes are in the set, and whether they are flat outlines or filled.
+
+## 4. Animals burst
+
+Request (`new.md`, 2026-11-24): "Add a burst type called Animals that explodes fireworks in the shapes of random zoo
+animals".
+
+Builds on: the Shapes burst (phase 3), whose outline-to-particles code it reuses with animal outlines.
+
+Proposed: `'animals'`, outlines drawn by us as point lists (original art, per the repo rules), one picked at random
+per burst; in the Burst menu.
+
+Open decisions (to ask when planning): which animals (for example elephant, giraffe, lion, monkey, penguin), and
+whether an outline faces a random way.
 
 ## Fixes from the code review of 2026-11-24 (done)
 
