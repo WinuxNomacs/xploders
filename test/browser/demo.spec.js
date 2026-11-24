@@ -191,6 +191,23 @@ test('the built site runs from a static host without errors', async ({ page }) =
   expect(errors).toEqual([])
 })
 
+test('both builds keep the class names', async ({ page }) => {
+  await page.goto('/demo/')
+  await page.addScriptTag({ url: '/dist/xploders.min.js' })
+  const mismatches = await page.evaluate(async () => {
+    const esm = await import('/dist/xploders.mjs')
+    const bad = []
+    for (const [build, mod] of [['esm', esm], ['script tag', window.Xploders]]) {
+      for (const [key, value] of Object.entries(mod)) {
+        if (typeof value === 'function' && /^[A-Z]/.test(key) && value.name !== key) bad.push(`${build}: ${key} is named ${value.name}`)
+      }
+      if (build === 'esm' && esm.default.name !== 'Xploders') bad.push(`esm: default is named ${esm.default.name}`)
+    }
+    return bad
+  })
+  expect(mismatches).toEqual([])
+})
+
 test('the script-tag build exposes a global Xploders class', async ({ page }) => {
   await page.goto('/demo/')
   await page.evaluate(() => delete window.Xploders)
