@@ -1,11 +1,17 @@
 import { Particle } from './particle.js'
 import { inRange } from './random.js'
 import { Core, Flame, Flash, Glow, Smoke } from './fireball.js'
+import { shapes } from './shapes.js'
 
 /** Turn between flames in a sunflower spread, radians. */
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 /** Front flames' launch speed, px/step at burst size 1; they travel about ten times this. */
 const FIREBALL_SPEED = 6
+/** Saturn's ball and ring edge launch speeds, px/step: the ring flies about twice as far. */
+const SATURN_BALL = 4
+const SATURN_RING = 9
+/** A shape's outermost sparks' launch speed, px/step. */
+const SHAPE_SPEED = 8
 
 /**
  * Burst styles. Each returns up to `count` particles for an explosion at (x, y).
@@ -133,6 +139,61 @@ export const bursts = {
             radius: r.range(16, 26) * s,
           }),
       ),
+    ]
+  },
+
+  // A ball of sparks in the launch colour inside one flattened, tilted ring in the
+  // opposite colour. Shared friction keeps the ball round and the ring an ellipse.
+  saturn: (c) => {
+    const r = c.random
+    const ball = Math.max(1, Math.round(c.count * 0.55))
+    const ring = Math.max(0, c.count - ball)
+    const decay = inRange(r, c.options.decay)
+    const ringHue = (c.hue + 180) % 360
+    const tilt = r.range(-0.6, 0.6)
+    const flat = r.range(0.22, 0.38)
+    const offset = r.range(0, Math.PI * 2)
+    return [
+      ...Array.from({ length: ball }, (_, i) =>
+        particle(c, {
+          angle: offset + i * GOLDEN_ANGLE,
+          speed: SATURN_BALL * Math.sqrt((i + 0.5) / ball),
+          decay,
+        }),
+      ),
+      ...Array.from({ length: ring }, (_, i) => {
+        const a = offset + (i / ring) * Math.PI * 2
+        const x = Math.cos(a)
+        const y = Math.sin(a) * flat
+        const rx = x * Math.cos(tilt) - y * Math.sin(tilt)
+        const ry = x * Math.sin(tilt) + y * Math.cos(tilt)
+        return particle(c, { angle: Math.atan2(ry, rx), speed: SATURN_RING * Math.hypot(rx, ry), hue: ringHue, decay })
+      }),
+    ]
+  },
+
+  // One outline picked at random. Each spark launches at a point of the outline,
+  // so the outline grows and drifts as a whole; one decay, so it fades as a whole.
+  // A star's eyes are two small fireworks: sparks around each eye's point.
+  shapes: (c) => {
+    const r = c.random
+    const names = Object.keys(shapes)
+    const name = names[r.int(0, names.length - 1)]
+    const decay = inRange(r, c.options.decay)
+    const eyeCount = name === 'star' ? Math.min(c.count - 1, 2 * Math.max(3, Math.round(c.count * 0.08))) : 0
+    const shape = shapes[name](c.count - eyeCount, r)
+    const eyes = shape.eyes ?? []
+    const eyeHue = (c.hue + 60) % 360
+    return [
+      ...shape.points.map(([x, y]) => particle(c, { angle: Math.atan2(y, x), speed: SHAPE_SPEED * Math.hypot(x, y), decay })),
+      ...Array.from({ length: eyes.length ? eyeCount : 0 }, (_, i) => {
+        const [ex, ey] = eyes[i % eyes.length]
+        const a = r.range(0, Math.PI * 2)
+        const pop = r.range(0.3, 0.9) // the little burst around the eye
+        const vx = ex * SHAPE_SPEED + Math.cos(a) * pop
+        const vy = ey * SHAPE_SPEED + Math.sin(a) * pop
+        return particle(c, { angle: Math.atan2(vy, vx), speed: Math.hypot(vx, vy), hue: eyeHue, decay, flicker: true })
+      }),
     ]
   },
 }

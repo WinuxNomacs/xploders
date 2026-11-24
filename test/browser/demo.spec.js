@@ -348,6 +348,7 @@ test('the script-tag build exposes a global Xploders class', async ({ page }) =>
     isClass: typeof window.Xploders === 'function',
     hasChicken: typeof window.Xploders.Chicken === 'function',
     hasJug: typeof window.Xploders.Jug === 'function',
+    hasCow: typeof window.Xploders.Cow === 'function',
     hasBursts: Object.keys(window.Xploders.bursts).sort(),
     hasSprite: typeof window.Xploders.Sprite.fromPixels === 'function',
   }))
@@ -355,7 +356,8 @@ test('the script-tag build exposes a global Xploders class', async ({ page }) =>
     isClass: true,
     hasChicken: true,
     hasJug: true,
-    hasBursts: ['crackle', 'fireball', 'peony', 'ring', 'willow'],
+    hasCow: true,
+    hasBursts: ['crackle', 'fireball', 'peony', 'ring', 'saturn', 'shapes', 'willow'],
     hasSprite: true,
   })
 })

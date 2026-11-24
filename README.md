@@ -93,7 +93,7 @@ refresh rate.
 | `opacity`      | `0.5`                                    | Trail fade per step                                        |
 | `boundaries`   | `{x: 50, y: 50, right: null, bottom: null, debug: false}` | Margins for where rockets explode, see below; `debug` draws the area |
 | `autoresize`   | `true`                                   | Follow the container's size                                |
-| `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, or a list to pick from per firework |
+| `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, `'saturn'`, `'shapes'`, or a list to pick from per firework |
 | `maxParticles` | `4000`                                   | Cap on live particles                                      |
 | `maxProjectiles` | `100`                                  | Cap on projectiles in flight; `launch()` beyond it launches fewer |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
@@ -101,6 +101,21 @@ refresh rate.
 | `seed`         | random                                   | Seed for a repeatable show                                 |
 
 The fireworks-js `sound` option is not supported; it is ignored if passed.
+
+### Burst styles
+
+| Style        | What it looks like                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| `'peony'`    | A ball of sparks (fireworks-js's explosion)                                                         |
+| `'ring'`     | A ring that stays round as it drifts and fades                                                      |
+| `'willow'`   | Long-lived gold strands that droop                                                                  |
+| `'crackle'`  | Flickering sparks that pop into tiny sparks near the end                                            |
+| `'fireball'` | A white flash, then a ball of fire with a blue heart that rises, cools to red and turns to smoke    |
+| `'saturn'`   | A ball in the launch colour inside a flattened, tilted ring in the opposite colour                  |
+| `'shapes'`   | An outline picked at random: a tilted ellipse, a polygon, a spiral, a smiley, a heart, or a star with little fireworks for eyes |
+
+Saturn and shapes keep their form as they grow, drift and fade, since every spark in them shares one friction,
+gravity and fade.
 
 ### Boundaries
 
