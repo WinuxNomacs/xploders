@@ -649,6 +649,290 @@ var shapes = {
     };
   }, "star")
 };
+function pathLength(points, closed) {
+  let total = 0;
+  const pts = closed ? [...points, points[0]] : points;
+  for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  return total;
+}
+__name(pathLength, "pathLength");
+function centreAndFit(points) {
+  const xs = points.map(([x]) => x);
+  const ys = points.map(([, y]) => y);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  return fit(points.map(([x, y]) => [x - cx, y - cy]));
+}
+__name(centreAndFit, "centreAndFit");
+function drawing(strokes, n) {
+  const counts = split(
+    n,
+    strokes.map((st) => pathLength(st.points, st.closed ?? false))
+  );
+  return centreAndFit(strokes.flatMap((st, i) => alongPath(st.points, counts[i], st.closed ?? false)));
+}
+__name(drawing, "drawing");
+function oval(cx, cy, rx, ry = rx) {
+  return { points: sample((t) => [cx + rx * Math.cos(TAU * t), cy + ry * Math.sin(TAU * t)], 48), closed: true };
+}
+__name(oval, "oval");
+var SNAKE_HEAD_Y = 55 + 14 * Math.sin(84 / 11);
+var animals = {
+  elephant: [
+    {
+      closed: true,
+      points: [
+        [14, 44],
+        [20, 32],
+        [32, 25],
+        [48, 22],
+        [62, 24],
+        [70, 19],
+        [80, 20],
+        [87, 27],
+        [89, 38],
+        [90, 52],
+        [93, 66],
+        [97, 74],
+        [92, 77],
+        [86, 68],
+        [83, 55],
+        [80, 46],
+        [76, 52],
+        [75, 85],
+        [64, 85],
+        [63, 64],
+        [50, 66],
+        [38, 66],
+        [36, 85],
+        [25, 85],
+        [24, 64],
+        [17, 58]
+      ]
+    },
+    { closed: true, points: [[60, 30], [70, 28], [73, 40], [66, 52], [58, 44]] },
+    // ear
+    { points: [[15, 46], [10, 56], [9, 62]] },
+    // tail
+    oval(82, 30, 1.5)
+  ],
+  giraffe: [
+    {
+      closed: true,
+      points: [
+        [18, 52],
+        [24, 47],
+        [48, 45],
+        [56, 40],
+        [60, 28],
+        [64, 16],
+        [65, 6],
+        [68, 9],
+        [70, 5],
+        [72, 10],
+        [80, 11],
+        [86, 15],
+        [83, 19],
+        [74, 19],
+        [70, 26],
+        [66, 38],
+        [63, 50],
+        [63, 60],
+        [62, 96],
+        [58, 96],
+        [57, 64],
+        [52, 64],
+        [51, 96],
+        [47, 96],
+        [46, 64],
+        [33, 64],
+        [32, 96],
+        [28, 96],
+        [27, 64],
+        [24, 64],
+        [23, 96],
+        [19, 96],
+        [18, 62]
+      ]
+    },
+    { points: [[18, 53], [12, 62], [11, 70]] },
+    // tail
+    { points: [[30, 52], [36, 51]] },
+    // spots
+    { points: [[42, 56], [48, 55]] },
+    { points: [[58, 34], [61, 33]] },
+    oval(76, 14, 1.2)
+  ],
+  lion: [
+    {
+      // body, from behind the mane round to its front
+      points: [
+        [56, 32],
+        [30, 34],
+        [18, 38],
+        [14, 50],
+        [17, 62],
+        [18, 86],
+        [26, 86],
+        [28, 68],
+        [46, 68],
+        [48, 86],
+        [56, 86],
+        [58, 62]
+      ]
+    },
+    { closed: true, points: sample((t) => [70 + (17 + 2.5 * Math.sin(TAU * 9 * t)) * Math.cos(TAU * t), 40 + (17 + 2.5 * Math.sin(TAU * 9 * t)) * Math.sin(TAU * t)], 120) },
+    // mane
+    oval(72, 41, 9, 10),
+    // face
+    oval(75, 37, 1.3),
+    { points: [[15, 44], [8, 36], [6, 26]] },
+    // tail
+    oval(6, 24, 2.5)
+    // its tuft
+  ],
+  monkey: [
+    oval(62, 26, 12),
+    // head
+    oval(51, 22, 4),
+    // ear
+    oval(70, 30, 6, 5),
+    // muzzle
+    oval(65, 22, 1.3),
+    oval(50, 56, 15, 19),
+    // body
+    { points: [[60, 46], [72, 58], [78, 68]] },
+    // arm
+    { points: [[44, 72], [40, 90], [50, 92]] },
+    // leg
+    {
+      // the curly tail, from its back
+      points: [
+        [36, 64],
+        [28, 71],
+        [20, 71],
+        [14, 65],
+        [14, 57],
+        [19, 52],
+        [25, 55],
+        [24, 61],
+        [19, 61]
+      ]
+    }
+  ],
+  penguin: [
+    {
+      closed: true,
+      points: [
+        [50, 8],
+        [58, 11],
+        [62, 16],
+        [72, 19],
+        [62, 23],
+        [64, 40],
+        [66, 60],
+        [62, 80],
+        [70, 88],
+        [54, 88],
+        [44, 86],
+        [34, 88],
+        [38, 70],
+        [38, 50],
+        [40, 30],
+        [44, 14]
+      ]
+    },
+    { points: [[46, 34], [36, 56], [41, 60]] },
+    // flipper
+    { points: [[52, 30], [56, 50], [56, 78]] },
+    // belly line
+    oval(56, 16, 1.5)
+  ],
+  flamingo: [
+    oval(38, 42, 18, 10),
+    // body
+    {
+      // neck and head
+      points: [
+        [53, 37],
+        [60, 28],
+        [59, 18],
+        [53, 11],
+        [56, 4],
+        [64, 3],
+        [69, 8],
+        [74, 11],
+        [75, 17],
+        [71, 14],
+        [66, 12]
+      ]
+    },
+    { points: [[22, 40], [12, 36], [16, 44]] },
+    // tail feathers
+    { points: [[40, 52], [40, 96], [48, 96]] },
+    // the leg it stands on
+    { points: [[44, 52], [52, 64], [42, 68]] },
+    // the tucked-up leg
+    oval(64, 7, 1.2)
+  ],
+  snake: [
+    {
+      closed: true,
+      points: [
+        ...Array.from({ length: 50 }, (_, i) => {
+          const x = 4 + i * 1.6;
+          const w = 5 * Math.min(1, i / 15);
+          return (
+            /** @type {Point} */
+            [x, 55 + 14 * Math.sin(x / 11) - w]
+          );
+        }),
+        ...Array.from({ length: 50 }, (_, j) => {
+          const i = 49 - j;
+          const x = 4 + i * 1.6;
+          const w = 5 * Math.min(1, i / 15);
+          return (
+            /** @type {Point} */
+            [x, 55 + 14 * Math.sin(x / 11) + w]
+          );
+        })
+      ]
+    },
+    oval(86, SNAKE_HEAD_Y, 7, 5),
+    // head
+    { points: [[93, SNAKE_HEAD_Y], [98, SNAKE_HEAD_Y], [101, SNAKE_HEAD_Y - 3]] },
+    // forked tongue
+    { points: [[98, SNAKE_HEAD_Y], [101, SNAKE_HEAD_Y + 3]] },
+    oval(88, SNAKE_HEAD_Y - 2, 1.2)
+  ],
+  turtle: [
+    {
+      closed: true,
+      points: [
+        ...Array.from({ length: 40 }, (_, i) => {
+          const a = Math.PI * (1 - i / 39);
+          return (
+            /** @type {Point} */
+            [50 + 30 * Math.cos(a), 56 - 26 * Math.sin(a)]
+          );
+        })
+      ]
+    },
+    { points: [[26, 46], [50, 42], [74, 46]] },
+    // the shell's pattern
+    { points: [[50, 30], [50, 42]] },
+    { points: [[78, 52], [86, 48]] },
+    // neck
+    oval(90, 46, 6, 5),
+    // head
+    oval(92, 44, 1.1),
+    { points: [[30, 56], [28, 66], [36, 66], [37, 56]] },
+    // legs
+    { points: [[62, 56], [62, 66], [70, 66], [70, 56]] },
+    { points: [[20, 54], [14, 58]] }
+    // tail
+  ]
+};
 
 // src/bursts.js
 var GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -810,7 +1094,19 @@ var bursts = {
         return particle(c, { angle: Math.atan2(vy, vx), speed: Math.hypot(vx, vy), hue: eyeHue, decay, flicker: true });
       })
     ];
-  }, "shapes")
+  }, "shapes"),
+  // A zoo animal's outline picked at random, facing left or right, built like
+  // `shapes`. Twice the count, since legs, tails and trunks need the points.
+  animals: /* @__PURE__ */ __name((c) => {
+    const r = c.random;
+    const names = Object.keys(animals);
+    const name = names[r.int(0, names.length - 1)];
+    const decay = inRange(r, c.options.decay);
+    const facing = r.next() < 0.5 ? 1 : -1;
+    return drawing(animals[name], c.count * 2).map(
+      ([x, y]) => particle(c, { angle: Math.atan2(y, x * facing), speed: SHAPE_SPEED * Math.hypot(x, y), decay })
+    );
+  }, "animals")
 };
 function crackleSparks(parent, r, max) {
   return Array.from(
