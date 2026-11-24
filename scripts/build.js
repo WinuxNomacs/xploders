@@ -11,6 +11,8 @@ const common = {
   bundle: true,
   target: 'es2020',
   sourcemap: true,
+  // Classes keep their own names (esbuild renames classes with static fields, and minifying mangles them).
+  keepNames: true,
   logLevel: 'info',
 }
 
