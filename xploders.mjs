@@ -1,9 +1,10 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/particle.js
-var Particle = class {
+var _Particle = class _Particle {
   /** @param {ParticleInit} init */
   constructor(init) {
     this.x = init.x;
@@ -56,9 +57,11 @@ var Particle = class {
     ctx.stroke();
   }
 };
+__name(_Particle, "Particle");
+var Particle = _Particle;
 
 // src/random.js
-var Random = class {
+var _Random = class _Random {
   /** @param {number} [seed] */
   constructor(seed) {
     this.state = (seed ?? Math.floor(Math.random() * 2 ** 32)) >>> 0;
@@ -95,9 +98,12 @@ var Random = class {
     return items[Math.floor(this.next() * items.length)];
   }
 };
+__name(_Random, "Random");
+var Random = _Random;
 function inRange(random, { min, max }, integer = false) {
   return integer ? random.int(min, max) : random.range(min, max);
 }
+__name(inRange, "inRange");
 
 // src/fireball.js
 var _Flame = class _Flame {
@@ -152,6 +158,7 @@ var _Flame = class _Flame {
     ctx.fill();
   }
 };
+__name(_Flame, "Flame");
 __publicField(_Flame, "BUOYANCY", 0.06);
 // upward px/step^2
 __publicField(_Flame, "FRICTION", 0.9);
@@ -194,6 +201,7 @@ var _Glow = class _Glow {
     ctx.fill();
   }
 };
+__name(_Glow, "Glow");
 __publicField(_Glow, "LIFE", 28);
 var Glow = _Glow;
 var _Smoke = class _Smoke {
@@ -239,6 +247,7 @@ var _Smoke = class _Smoke {
     ctx.fill();
   }
 };
+__name(_Smoke, "Smoke");
 __publicField(_Smoke, "MAX_ALPHA", 0.35);
 var Smoke = _Smoke;
 
@@ -260,11 +269,12 @@ function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
     ...overrides
   });
 }
+__name(particle, "particle");
 var bursts = {
-  peony: (c) => Array.from({ length: c.count }, () => particle(c)),
+  peony: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c)), "peony"),
   // Evenly spaced angles and one shared speed: friction and gravity act the same
   // on every particle, so the ring stays a circle as it drifts and fades.
-  ring: (c) => {
+  ring: /* @__PURE__ */ __name((c) => {
     const speed = c.random.range(6, 9);
     const decay = inRange(c.random, c.options.decay);
     const offset = c.random.range(0, Math.PI * 2);
@@ -272,9 +282,9 @@ var bursts = {
       { length: c.count },
       (_, i) => particle(c, { angle: offset + i / c.count * Math.PI * 2, speed, decay })
     );
-  },
+  }, "ring"),
   // Long-lived gold strands that droop further than a peony.
-  willow: (c) => Array.from(
+  willow: /* @__PURE__ */ __name((c) => Array.from(
     { length: c.count },
     () => particle(c, {
       hue: c.random.range(35, 48),
@@ -286,12 +296,12 @@ var bursts = {
       brightness: c.random.range(55, 70),
       flicker: false
     })
-  ),
+  ), "willow"),
   // Flickers, then each particle pops into a few tiny sparks near the end.
-  crackle: (c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })),
+  crackle: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })), "crackle"),
   // A ball of fire: a glow, rising flames that cool from yellow to red, gold
   // embers, then smoke as the flames die. Its own colours; the hue is unused.
-  fireball: (c) => {
+  fireball: /* @__PURE__ */ __name((c) => {
     const r = c.random;
     const smoke = Math.floor(c.count * 0.15);
     const embers = Math.floor(c.count * 0.25);
@@ -333,7 +343,7 @@ var bursts = {
         })
       )
     ];
-  }
+  }, "fireball")
 };
 function crackleSparks(parent, r, max) {
   return Array.from(
@@ -354,6 +364,7 @@ function crackleSparks(parent, r, max) {
     })
   );
 }
+__name(crackleSparks, "crackleSparks");
 
 // src/sprite.js
 function parsePixels(frames2, palette3) {
@@ -386,12 +397,14 @@ function parsePixels(frames2, palette3) {
   });
   return { frameWidth, frameHeight, frames: frames2.length, data };
 }
+__name(parsePixels, "parsePixels");
 function hexToRgb(css) {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(css);
   if (!m) throw new Error(`xploders: palette colour "${css}" is not #rgb or #rrggbb`);
   const h = m[1].length === 3 ? [...m[1]].map((c) => c + c).join("") : m[1];
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
+__name(hexToRgb, "hexToRgb");
 function createCanvas(w, h) {
   if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(w, h);
   const c = document.createElement("canvas");
@@ -399,13 +412,15 @@ function createCanvas(w, h) {
   c.height = h;
   return c;
 }
+__name(createCanvas, "createCanvas");
 function isReady(image) {
   if (typeof HTMLImageElement === "function" && image instanceof HTMLImageElement) {
     return image.complete && image.naturalWidth > 0;
   }
   return true;
 }
-var Sprite = class _Sprite {
+__name(isReady, "isReady");
+var _Sprite = class _Sprite {
   /**
    * @param {CanvasImageSource | null} image null when built lazily from pixels
    * @param {object} opts
@@ -490,11 +505,13 @@ var Sprite = class _Sprite {
     ctx.restore();
   }
 };
+__name(_Sprite, "Sprite");
+var Sprite = _Sprite;
 
 // src/engine.js
 var STEP_MS = 1e3 / 60;
 var MAX_FRAME_MS = 250;
-var Engine = class {
+var _Engine = class _Engine {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {import('./options.js').Options} options live options object (updated in place)
@@ -735,6 +752,8 @@ var Engine = class {
     for (const p of this.particles) if ((p.layer ?? "trail") === layer) p.draw(ctx, this.flickerRandom);
   }
 };
+__name(_Engine, "Engine");
+var Engine = _Engine;
 
 // src/options.js
 function defaultOptions() {
@@ -764,7 +783,8 @@ function defaultOptions() {
     reducedMotion: "auto"
   };
 }
-var isPlainObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+__name(defaultOptions, "defaultOptions");
+var isPlainObject = /* @__PURE__ */ __name((v) => typeof v === "object" && v !== null && !Array.isArray(v), "isPlainObject");
 function deepMerge(target, source) {
   const t = target;
   for (const [key, value] of Object.entries(source)) {
@@ -774,6 +794,7 @@ function deepMerge(target, source) {
   }
   return target;
 }
+__name(deepMerge, "deepMerge");
 
 // src/projectile.js
 var _Projectile = class _Projectile {
@@ -830,12 +851,13 @@ var _Projectile = class _Projectile {
   draw(_ctx) {
   }
 };
+__name(_Projectile, "Projectile");
 /** Downward acceleration of the default arc, px/step^2. */
 __publicField(_Projectile, "gravity", 0.15);
 var Projectile = _Projectile;
 
 // src/projectiles/rocket.js
-var Rocket = class extends Projectile {
+var _Rocket = class _Rocket extends Projectile {
   /** @param {import('../projectile.js').ProjectileInit} init */
   constructor(init) {
     super(init);
@@ -879,6 +901,8 @@ var Rocket = class extends Projectile {
     ctx.stroke();
   }
 };
+__name(_Rocket, "Rocket");
+var Rocket = _Rocket;
 
 // src/feather.js
 var sprite = Sprite.fromPixels(
@@ -930,6 +954,7 @@ var _Feather = class _Feather {
     sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha });
   }
 };
+__name(_Feather, "Feather");
 __publicField(_Feather, "FALL_SPEED", 0.7);
 // px/step, slow and steady
 __publicField(_Feather, "FADE_STEPS", 40);
@@ -1074,6 +1099,7 @@ function compose(base, ...overlays) {
     }).join("")
   );
 }
+__name(compose, "compose");
 var flapFrames = [compose(body, wingUp), compose(body, wingMid), compose(body, wingDown), compose(body, wingMid)];
 var panicFrames = [compose(body, wingUp, panicFace, ruffle), compose(body, wingDown, panicFace)];
 
@@ -1161,6 +1187,7 @@ var _Chicken = class _Chicken extends Projectile {
     _Chicken.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, flip: this.flip, flash: this.flash });
   }
 };
+__name(_Chicken, "Chicken");
 /** Defaults for every chicken; per launch: `show.launch('chicken', 1, {flight: 'cross'})`. */
 __publicField(
   _Chicken,
@@ -1241,6 +1268,7 @@ var flameC = flameB.map((row) => [...row].reverse().join(""));
 function blank() {
   return Array.from({ length: HEIGHT }, () => Array(WIDTH).fill("."));
 }
+__name(blank, "blank");
 function paintJug() {
   const g = blank();
   halfWidths.forEach((hw, i) => {
@@ -1301,6 +1329,7 @@ function paintJug() {
   }
   return g;
 }
+__name(paintJug, "paintJug");
 function withFlame(jug2, flame) {
   const g = jug2.map((row) => [...row]);
   const x0 = CENTER - 3;
@@ -1309,6 +1338,7 @@ function withFlame(jug2, flame) {
   });
   return g.map((row) => row.join(""));
 }
+__name(withFlame, "withFlame");
 var jug = paintJug();
 var frames = [withFlame(jug, flameA), withFlame(jug, flameB), withFlame(jug, flameC)];
 var shardFrames = [
@@ -1357,6 +1387,7 @@ var _Shard = class _Shard {
     sprite2.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation });
   }
 };
+__name(_Shard, "Shard");
 __publicField(_Shard, "GRAVITY", 0.22);
 // px/step^2
 __publicField(_Shard, "FADE_STEPS", 30);
@@ -1427,6 +1458,7 @@ var _Jug = class _Jug extends Projectile {
     _Jug.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, rotation: this.rotation });
   }
 };
+__name(_Jug, "Jug");
 /** Defaults for every jug; per launch: `show.launch('jug', 1, {spin: 0})`. */
 __publicField(
   _Jug,
@@ -1443,7 +1475,7 @@ __publicField(_Jug, "sprite", Sprite.fromPixels(frames, palette2));
 var Jug = _Jug;
 
 // src/pointer.js
-var Pointer = class {
+var _Pointer = class _Pointer {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {import('./options.js').Options} options live options
@@ -1535,15 +1567,17 @@ var Pointer = class {
     this.active = false;
   }
 };
+__name(_Pointer, "Pointer");
+var Pointer = _Pointer;
 
 // src/index.js
 var registry = /* @__PURE__ */ new Map();
 registry.set("rocket", Rocket);
 registry.set("chicken", Chicken);
 registry.set("jug", Jug);
-var isCanvas = (el) => typeof /** @type {any} */
-el.getContext === "function";
-var Xploders = class {
+var isCanvas = /* @__PURE__ */ __name((el) => typeof /** @type {any} */
+el.getContext === "function", "isCanvas");
+var _Xploders = class _Xploders {
   /**
    * @param {Element} target a canvas, or a container to create a canvas in
    * @param {XplodersOptions} [options]
@@ -1716,6 +1750,8 @@ var Xploders = class {
     return this;
   }
 };
+__name(_Xploders, "Xploders");
+var Xploders = _Xploders;
 var index_default = Xploders;
 export {
   Chicken,
