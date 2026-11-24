@@ -3,6 +3,7 @@
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 rmSync('dist', { recursive: true, force: true })
 
@@ -27,4 +28,6 @@ await build({
   outfile: 'dist/xploders.min.js',
 })
 
-execFileSync('npx', ['tsc'], { stdio: 'inherit' })
+// Through node rather than npx, which execFileSync can't start on Windows (npx.cmd needs a shell).
+const tsc = fileURLToPath(new URL('../node_modules/typescript/bin/tsc', import.meta.url))
+execFileSync(process.execPath, [tsc], { stdio: 'inherit' })

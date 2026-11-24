@@ -9,7 +9,8 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
   (default 8000) and moves to the next free port if it is taken; it prints the URL it used.
 - `npm run check`: lint, typecheck, unit tests, build, browser tests. Run before every merge.
 - `npm test`: Vitest, Node only (`test/*.test.js`): no DOM; `test/helpers.js` has a recording fake canvas and a
-  scheduler the test drives frame by frame.
+  scheduler the test drives frame by frame; `test/setup.js` gives Node a fake `OffscreenCanvas` and `ImageData`, so
+  sprites really draw in unit tests (without it a sprite threw on its first draw and the engine quietly removed it).
 - `npm run test:browser`: Playwright against the demo on port 8123 (it starts and stops its own server). Uses
   `dist/`, so build first.
 - `npm run build:site`: build, then the demo site in `site/` (git-ignored), loading `dist/xploders.mjs`.

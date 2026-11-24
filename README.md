@@ -40,7 +40,8 @@ await show.waitStop() // stop launching, resolve once the sky is empty
 ```
 
 Pass a container (a canvas is created inside it and follows its size) or a canvas element. The canvas is transparent,
-so the page shows through.
+so the page shows through. A canvas you pass draws at its size on the page; give it a CSS size to make it follow a
+layout (`width: 100%`), otherwise it keeps the size it had when the show started.
 
 ### Methods
 
@@ -89,6 +90,7 @@ refresh rate.
 | `autoresize`   | `true`                                   | Follow the container's size                                |
 | `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, `'fireball'`, or a list to pick from per firework |
 | `maxParticles` | `4000`                                   | Cap on live particles                                      |
+| `maxProjectiles` | `100`                                  | Cap on projectiles in flight; `launch()` beyond it launches fewer |
 | `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
 | `reducedMotion` | `'auto'`                                | `'auto'`, `'always'` or `'ignore'`, see below              |
 | `seed`         | random                                   | Seed for a repeatable show                                 |
@@ -99,7 +101,8 @@ The fireworks-js `sound` option is not supported; it is ignored if passed.
 
 With `mouse.click`, holding the pointer on the canvas launches rockets towards it, up to `mouse.max` in flight; the
 hold follows the pointer and ends on release, even outside the canvas. With `mouse.move`, auto-launched rockets aim at
-the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'` and `'jug'` work).
+the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'` and `'jug'` work; an unknown name logs a warning
+and launches nothing).
 
 Events are read from the canvas only, as in fireworks-js. If your overlay is click-through (`pointer-events: none`),
 pointer launch doesn't fire, and the page underneath stays usable. While `click` is on, the canvas gets
@@ -108,7 +111,7 @@ pointer launch doesn't fire, and the page underneath stays usable. While `click`
 ### Reduced motion
 
 When the visitor's system asks for reduced motion (`prefers-reduced-motion: reduce`), the show calms down by default:
-no auto-launch, no flickering sparks, no chicken flash. `launch()`, `launchAt()` and pointer launch still work. It
+no auto-launch, no flickering sparks, no chicken flash, no fireball flash. `launch()`, `launchAt()` and pointer launch still work. It
 follows the setting live. `reducedMotion: 'always'` calms the show for everyone; `'ignore'` never calms it.
 
 ### The chicken
@@ -186,8 +189,8 @@ side; an image that hasn't loaded yet is skipped.
 
 Extend `Projectile`, override `draw(ctx)`, and optionally `update()` (one call per step; move with `moveTo(x, y)`),
 `shouldExplode()` and `explode(engine)`. Set `this.burst` to pick its burst style, and `this.layer = 'sprite'` to
-draw it crisp on top instead of with the fading firework trails (which would smear a moving picture). Then register
-it:
+draw it crisp on top instead of with the fading firework trails (which would smear a moving picture). A projectile
+or particle that throws is removed and logged; the show keeps running. Then register it:
 
 ```js
 import { Xploders, Projectile } from 'xploders'

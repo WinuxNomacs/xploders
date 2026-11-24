@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { Chicken } from '../src/projectiles/chicken.js'
 import { Feather } from '../src/feather.js'
 import { Particle } from '../src/particle.js'
@@ -129,6 +129,24 @@ describe('Chicken explosion', () => {
     const show = new Xploders(/** @type {any} */ (fakeCanvas()), { intensity: 0 }, scheduler)
     show.launch('chicken', 2, { flight: 'cross', scale: 5 })
     for (const c of show.engine.projectiles) expect(c).toMatchObject({ flight: 'cross', scale: 5 })
+  })
+})
+
+describe('Chicken in a running show', () => {
+  it('draws through its whole life without errors and leaves an empty sky', () => {
+    const errors = vi.spyOn(console, 'error')
+    const scheduler = fakeScheduler()
+    const s = new Xploders(/** @type {any} */ (fakeCanvas()), { seed: 4, intensity: 0 }, scheduler).start()
+    s.launch('chicken', 1, { panicSteps: 5 })
+    let feathers = false
+    for (let i = 0; i < 1200; i++) {
+      scheduler.steps(1)
+      feathers ||= s.engine.particles.some((p) => p instanceof Feather)
+    }
+    expect(feathers).toBe(true)
+    expect(errors).not.toHaveBeenCalled()
+    expect(s.engine.projectiles.length + s.engine.particles.length).toBe(0)
+    errors.mockRestore()
   })
 })
 

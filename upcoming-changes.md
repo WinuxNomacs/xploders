@@ -2,10 +2,22 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Fixes from the code review of 2026-11-24 (plan below)
+- **Up next:** nothing planned yet
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Fixes from the code review** (2026-11-24, branch `fix/review-findings`): canvas sized from its own box and an
+  intrinsic size pinned (`updateSize` in `src/index.js`); `deepMerge` skips prototype keys (`src/options.js`);
+  particle errors removed and logged once per step, a failed frame never stops the loop, non-finite bursts ignored,
+  no draw to a zero-size backing store, smoke drawn behind sprites, unknown `mouse.projectile` warned about,
+  `maxProjectiles` (`src/engine.js`); fireball drawn from cached soft dots, no glow in calm mode (`src/fireball.js`,
+  `src/bursts.js`); compact demo controls and bursts below them on phones; `tsc` run through `node` in
+  `scripts/build.js`. Tests: `test/robustness.test.js`, whole-life tests for the jug and chicken with
+  `test/setup.js`, browser tests for sizing at DPR 2 and the demo on a phone. Plan kept below.
+  - Fireball draw cost after caching, measured 2026-11-24 in headless Chromium at DPR 2 (software rendering):
+    10 fireballs 9.0 ms per frame (was 10.5), 40 fireballs 32.2 ms (was 39.6); 10 peonies 5.0 ms. What remains is
+    fill rate (large soft dots, additive), not per-piece overhead.
 
 - **Jug-o-BOOM** (2026-11-23, branch `phase-4/jug`): original stoneware jug art lettered "JUG-O-BOOM"
   (`src/art/jug.js`, painted into text grids with a 3x5 font), the lobbed, tumbling jug with wick embers
@@ -51,7 +63,7 @@
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
 
-## Fixes from the code review of 2026-11-24
+## Fixes from the code review of 2026-11-24 (done)
 
 Branch `fix/review-findings`. The user asked for all of them to be fixed. Each fix gets a test seen failing first.
 

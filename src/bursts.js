@@ -12,6 +12,7 @@ import { Flame, Glow, Smoke } from './fireball.js'
  * @property {number} count
  * @property {import('./options.js').Options} options
  * @property {import('./random.js').Random} random
+ * @property {boolean} [calm] reduced motion is in effect: no flashes
  *
  * @typedef {(c: BurstContext) => import('./engine.js').ParticleLike[]} Burst
  */
@@ -75,13 +76,14 @@ export const bursts = {
 
   // A ball of fire: a glow, rising flames that cool from yellow to red, gold
   // embers, then smoke as the flames die. Its own colours; the hue is unused.
+  // Under reduced motion there is no flash of light.
   fireball: (c) => {
     const r = c.random
     const smoke = Math.floor(c.count * 0.15)
     const embers = Math.floor(c.count * 0.25)
-    const flames = Math.max(1, c.count - smoke - embers - 1)
+    const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 0 : 1))
     return [
-      new Glow(c.x, c.y, 120),
+      ...(c.calm ? [] : [new Glow(c.x, c.y, 120)]),
       ...Array.from(
         { length: flames },
         () =>

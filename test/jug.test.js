@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { Jug } from '../src/projectiles/jug.js'
 import { Shard } from '../src/shard.js'
 import { Flame, Glow, Smoke } from '../src/fireball.js'
@@ -140,12 +140,20 @@ describe('Jug in a show', () => {
     expect(e.particles.length).toBeLessThanOrEqual(25)
   })
 
-  it('draws through its whole life and leaves an empty sky', () => {
+  it('draws through its whole life without errors and leaves an empty sky', () => {
+    const errors = vi.spyOn(console, 'error')
     const scheduler = fakeScheduler()
     const s = new Xploders(/** @type {any} */ (fakeCanvas()), { seed: 4, intensity: 0 }, scheduler).start()
     s.launch('jug')
-    scheduler.steps(600)
+    let burst = false
+    for (let i = 0; i < 600; i++) {
+      scheduler.steps(1)
+      burst ||= s.engine.particles.some((p) => p instanceof Shard)
+    }
+    expect(burst).toBe(true) // it really flew and burst, rather than being removed
+    expect(errors).not.toHaveBeenCalled()
     expect(s.engine.projectiles.length + s.engine.particles.length).toBe(0)
+    errors.mockRestore()
   })
 
   it('is registered as jug', () => {

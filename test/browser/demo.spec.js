@@ -227,3 +227,86 @@ test('the script-tag build exposes a global Xploders class', async ({ page }) =>
     hasSprite: true,
   })
 })
+
+test.describe('sizing on a high-DPI screen', () => {
+  test.use({ deviceScaleFactor: 2 })
+
+  /** Waits a few frames so ResizeObserver and the loop get to run. */
+  const frames = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 100)))))
+
+  test('a canvas with no CSS size keeps its size instead of growing', async ({ page }) => {
+    await page.goto('/demo/')
+    const start = await page.evaluate(() => {
+      const c = document.createElement('canvas')
+      c.id = 'bare'
+      document.body.append(c)
+      window.bare = new window.Xploders(c)
+      return [c.clientWidth, c.clientHeight]
+    })
+    for (let i = 0; i < 5; i++) await frames(page)
+    const end = await page.evaluate(() => {
+      const c = document.getElementById('bare')
+      return { css: [c.clientWidth, c.clientHeight], backing: [c.width, c.height], drawing: [window.bare.engine.width, window.bare.engine.height] }
+    })
+    expect(end.css).toEqual(start)
+    expect(end.drawing).toEqual(start)
+    expect(end.backing).toEqual(start.map((v) => v * 2))
+  })
+
+  test('a canvas in a padded container draws at the size it is shown', async ({ page }) => {
+    await page.goto('/demo/')
+    const r = await page.evaluate(() => {
+      const box = document.createElement('div')
+      box.style.cssText = 'position: fixed; top: 0; width: 300px; height: 200px; padding: 20px'
+      document.body.append(box)
+      const s = new window.Xploders(box)
+      return { drawing: [s.engine.width, s.engine.height], shown: [s.canvas.clientWidth, s.canvas.clientHeight] }
+    })
+    expect(r.drawing).toEqual([300, 200])
+    expect(r.shown).toEqual([300, 200])
+  })
+
+  test('a CSS-sized canvas still follows its container when it resizes', async ({ page }) => {
+    await page.goto('/demo/')
+    await page.evaluate(() => {
+      const box = document.createElement('div')
+      box.id = 'box'
+      box.style.cssText = 'position: fixed; top: 0; width: 400px; height: 200px'
+      document.body.append(box)
+      window.boxed = new window.Xploders(box)
+    })
+    await frames(page)
+    await page.evaluate(() => Object.assign(document.getElementById('box').style, { width: '250px', height: '120px' }))
+    await frames(page)
+    const r = await page.evaluate(() => [window.boxed.engine.width, window.boxed.engine.height, window.boxed.canvas.clientWidth])
+    expect(r).toEqual([250, 120, 250])
+  })
+
+  test('a canvas in a container with no height stays put', async ({ page }) => {
+    await page.goto('/demo/')
+    const start = await page.evaluate(() => {
+      const box = document.createElement('div')
+      box.id = 'auto'
+      box.style.cssText = 'position: fixed; top: 0; width: 300px'
+      document.body.append(box)
+      window.auto = new window.Xploders(box)
+      return window.auto.engine.height
+    })
+    for (let i = 0; i < 5; i++) await frames(page)
+    expect(await page.evaluate(() => window.auto.engine.height)).toBe(start)
+  })
+})
+
+test.describe('the demo on a phone', () => {
+  test.use({ viewport: { width: 390, height: 700 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true })
+
+  test('fireworks burst below the controls, not behind them', async ({ page }) => {
+    await page.goto('/demo/')
+    const r = await page.evaluate(() => ({
+      controlsBottom: document.querySelector('.controls').getBoundingClientRect().bottom,
+      top: window.show.currentOptions.boundaries.y,
+    }))
+    expect(r.top).toBeGreaterThan(r.controlsBottom)
+    expect(r.controlsBottom).toBeLessThan(200) // compact enough to leave sky
+  })
+})

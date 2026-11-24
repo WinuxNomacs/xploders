@@ -30,5 +30,11 @@ el('burst').addEventListener('change', () => {
 el('intensity').addEventListener('input', () => show.updateOptions({ intensity: Number(el('intensity').value) }))
 el('debug').addEventListener('change', () => show.updateBoundaries({ debug: el('debug').checked }))
 
+// Fireworks burst below the controls, not behind them (they take more room on a phone).
+const controls = /** @type {HTMLElement} */ (document.querySelector('.controls'))
+const keepBelowControls = () => show.updateBoundaries({ y: Math.round(controls.getBoundingClientRect().bottom) + 24 })
+new ResizeObserver(keepBelowControls).observe(controls)
+keepBelowControls()
+
 // Exposed for the browser tests and for poking at in the console.
 Object.assign(window, { show, Xploders })

@@ -21,6 +21,7 @@ const MAX_FRAME_MS = 250 // a longer gap (tab in background) is clamped, not rep
  * @typedef {object} ParticleLike
  * @property {boolean} dead
  * @property {'trail' | 'sprite'} [layer]
+ * @property {boolean} [behind] drawn before everything else on its layer (smoke)
  * @property {() => boolean} update one step; true when it pops (crackle)
  * @property {(ctx: CanvasRenderingContext2D, flickerRandom: () => number) => void} draw
  */
@@ -141,15 +142,19 @@ export class Engine {
     if (!this.running) return
     this.accumulator += Math.min(Math.max(0, now - this.lastTime), MAX_FRAME_MS)
     this.lastTime = now
-    while (this.accumulator >= STEP_MS) {
-      this.step()
-      this.accumulator -= STEP_MS
-      this.pendingSteps++
+    try {
+      while (this.accumulator >= STEP_MS) {
+        this.step()
+        this.accumulator -= STEP_MS
+        this.pendingSteps++
+      }
+      if (this.pendingSteps > 0) this.draw(this.pendingSteps)
+    } catch (error) {
+      // Pieces that fail are removed where they fail; this is the last guard, so the loop never dies.
+      console.error('xploders: a frame failed', error)
+      this.accumulator = 0
     }
-    if (this.pendingSteps > 0) {
-      this.draw(this.pendingSteps)
-      this.pendingSteps = 0
-    }
+    this.pendingSteps = 0
     if (this.running) this.frameId = this.raf(this.tick)
     if (this.empty && this.onEmpty) this.onEmpty()
   }
@@ -158,7 +163,12 @@ export class Engine {
   step() {
     const o = this.options
     if (this.pointer?.active && o.mouse.click && this.projectiles.length < o.mouse.max) {
-      this.launch(1, this.resolve(o.mouse.projectile))
+      const Cls = this.resolve(o.mouse.projectile)
+      if (Cls) this.launch(1, Cls)
+      else if (this.warnedProjectile !== o.mouse.projectile) {
+        this.warnedProjectile = o.mouse.projectile
+        console.warn(`xploders: mouse.projectile "${o.mouse.projectile}" is not a registered type; nothing launched`)
+      }
     }
     if (this.autoLaunch && !this.calm && o.intensity > 0) {
       // fireworks-js advances its clock by intensity * pi per second.
@@ -190,16 +200,29 @@ export class Engine {
     const particles = this.particles
     this.particles = []
     let live = particles.length
+    let failed = 0
+    /** @type {unknown} */
+    let firstError
     for (const p of particles) {
-      if (p.update() && p instanceof Particle) {
-        const sparks = crackleSparks(p, this.random, Math.floor(this.options.maxParticles) - live + 1)
-        this.particles.push(...sparks)
-        live += sparks.length
+      try {
+        if (p.update() && p instanceof Particle) {
+          const sparks = crackleSparks(p, this.random, Math.floor(this.options.maxParticles) - live + 1)
+          this.particles.push(...sparks)
+          live += sparks.length
+        }
+      } catch (error) {
+        if (!failed++) firstError = error
+        live--
+        continue
       }
       if (p.dead) live--
       else this.particles.push(p)
     }
+    if (failed) console.error(`xploders: removed ${failed} particle(s) that threw`, firstError)
   }
+
+  /** @type {string | undefined} the unknown mouse.projectile already warned about */
+  warnedProjectile = undefined
 
   /** @returns {number} how many more particles fit under maxParticles */
   capacity() {
@@ -218,7 +241,7 @@ export class Engine {
     const o = this.options
     const r = this.random
     const b = o.boundaries
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < count && this.projectiles.length < o.maxProjectiles; i++) {
       const x = (this.width * inRange(r, o.rocketsPoint, true)) / 100
       // As in fireworks-js: aim at the pointer while held, or while `move` is on and it is over the canvas.
       const target = this.pointer?.target() ?? {
@@ -242,13 +265,14 @@ export class Engine {
    * @param {import('./options.js').BurstStyle} [style] defaults to the `burst` option
    */
   burst(x, y, hue, style) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return
     const o = this.options
     const choice = style ?? (Array.isArray(o.burst) ? this.random.pick(o.burst) : o.burst)
     const make = bursts[choice] ?? bursts.peony
     const count = Math.min(Math.floor(o.particles), this.capacity())
     if (count <= 0) return
     // A burst may add a few non-particle pieces (a fireball's glow): trim to fit.
-    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }).slice(0, this.capacity()))
+    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random, calm: this.calm }).slice(0, this.capacity()))
   }
 
   /**
@@ -262,7 +286,7 @@ export class Engine {
   /** @param {number} steps physics steps since the last draw */
   draw(steps) {
     const { ctx, trailCtx: tc, width, height, options: o } = this
-    if (width <= 0 || height <= 0) return
+    if (width <= 0 || height <= 0 || this.canvas.width === 0 || this.canvas.height === 0) return
     // Fade the trail layer once per step, so trails look the same at 60 and 120 Hz.
     const fade = 1 - (1 - o.opacity) ** steps
     tc.globalCompositeOperation = 'destination-out'
@@ -293,6 +317,8 @@ export class Engine {
    * @param {'trail' | 'sprite'} layer
    */
   drawLayer(ctx, layer) {
+    const mine = this.particles.filter((p) => (p.layer ?? 'trail') === layer)
+    let failed = this.drawParticles(ctx, mine.filter((p) => p.behind))
     for (const p of this.projectiles) {
       if (p.layer !== layer) continue
       try {
@@ -302,6 +328,26 @@ export class Engine {
         this.projectiles = this.projectiles.filter((q) => q !== p)
       }
     }
-    for (const p of this.particles) if ((p.layer ?? 'trail') === layer) p.draw(ctx, this.flickerRandom)
+    failed += this.drawParticles(ctx, mine.filter((p) => !p.behind))
+    if (failed) this.particles = this.particles.filter((p) => !p.dead)
+  }
+
+  /**
+   * Draws particles; one that throws is marked dead and the first error logged.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {ParticleLike[]} list
+   * @returns {number} how many failed
+   */
+  drawParticles(ctx, list) {
+    let failed = 0
+    for (const p of list) {
+      try {
+        p.draw(ctx, this.flickerRandom)
+      } catch (error) {
+        if (!failed++) console.error('xploders: removed a particle that threw while drawing', error)
+        p.dead = true
+      }
+    }
+    return failed
   }
 }
