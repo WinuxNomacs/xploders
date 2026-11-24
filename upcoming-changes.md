@@ -2,11 +2,22 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Jug launch spots and the new fireball (details below)
-- **Then:** 2. The exploding cow
+- **Up next:** 1. The exploding cow (details below)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Jug launch spots and the new fireball** (2026-11-24, branch `phase-6/jug-spots-fireball`): jugs start at a
+  random spot 10-90% across the bottom edge, clicks on the sky included (`launchPoint` in `Jug.defaults`,
+  `src/projectiles/jug.js`); the `fireball` burst goes off with a white `Flash`, flames blast out as a round ball
+  (sunflower spread, rise held back for the first 15 steps) and cool blue-white, orange-yellow, red, around a blue
+  `Core` drawn normally on the sprite layer (additive flames washed out any blue to white) (`src/fireball.js`,
+  `src/bursts.js`). Tests in `test/jug.test.js`: launch spots (launchAt included, rockets unchanged), the round
+  blast, the blue heart, flame colours, the flash and none when calm. Seen frame by frame in headless Chromium.
+  Plan kept below.
+  - Draw cost against `main`, measured 2026-11-24 in headless Chromium at DPR 2, jug size (`burstSize` 3), two
+    runs each: 1 fireball 10.5-11.5 ms per frame (main 10.6-10.7), 3 fireballs 25.1-25.6 ms (main 24.1-24.6),
+    10 fireballs 76.0-77.6 ms (main 71.7-73.1). Several jug fireballs at once are still heavy, as before.
 
 - **Demo: calmer default and click to fire** (2026-11-24, branch `phase-5/click-to-fire`): the demo starts at
   intensity 15 (library default still 30); a click or tap on the sky launches the last selected type at that spot
@@ -103,7 +114,7 @@ the user selected, default fireworks". Builds on the demo page (`demo/index.html
   Chicken (and Jug-o-BOOM), a click launches that type at the click point; a click while 10+ auto rockets fly still
   launches; clicks on the controls launch nothing; no Pointer button.
 
-## 1. Jug launch spots and the new fireball
+## Jug launch spots and the new fireball (done)
 
 Requests (`new.md`, 2026-11-24): "Randomize starting launch position for Jugs but keep it at the bottom of the
 screen"; "Fireballs need to start with a bright white flash at their explosion's epicenter with their actual fireball
@@ -126,10 +137,12 @@ and cool from white-yellow to red, gold embers, then smoke; scaled by `burstSize
 - **White flash at the epicentre, none under reduced motion** (as the glow and the chicken's flash today); the
   sphere still shows.
 
-### Proposed (to confirm when building)
+### Proposed, and as built
 
 - Jug: a `launchPoint` option in `Jug.defaults` (`{min: 10, max: 90}`, percent of width) that replaces the launch
   x the engine passes; README jug table row.
+- As built, the blue comes from a separate `Core` ball rather than the flames alone: overlapping flames add up to
+  white on the additive trail layer, which hid every blue flame.
 - Fireball: a short, bright white `Flash` (a few steps, small and intense) at the centre before the glow; flames
   launched at evenly spread angles with one shared speed (small jitter) so the front stays round, buoyancy held back
   until they slow; flame colour runs blue-white, orange-yellow, red over its life, with a few inner flames staying
@@ -139,7 +152,7 @@ and cool from white-yellow to red, gold embers, then smoke; scaled by `burstSize
   absent when calm; the flames' early positions lie near one circle; flame colour starts blue and ends red. A visual
   check in a real browser of the blast frame by frame.
 
-## 2. The exploding cow
+## 1. The exploding cow
 
 Request (`new.md`, 2026-11-24): "add exploding cows that appear to Moo! excitedly just before they explode into
 fireworks, steaks and milk splatters". Builds on the projectile API (`src/projectile.js`, `moveTo`), pixel sprites

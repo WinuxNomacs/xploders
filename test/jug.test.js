@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { Jug } from '../src/projectiles/jug.js'
 import { Shard } from '../src/shard.js'
-import { Flame, Glow, Smoke } from '../src/fireball.js'
+import { Core, Flame, Flash, Glow, Smoke } from '../src/fireball.js'
 import { Particle } from '../src/particle.js'
 import { Random } from '../src/random.js'
 import { bursts } from '../src/bursts.js'
@@ -105,9 +105,13 @@ describe('Jug in a show', () => {
   it('sheds embers off the wick in flight, within maxParticles', () => {
     const s = show({ maxParticles: 4 })
     s.launch('jug')
-    for (let i = 0; i < 30; i++) s.engine.step()
-    expect(s.engine.particles.length).toBe(4)
-    expect(s.engine.particles.every((p) => p instanceof Particle && p.gravity < 0)).toBe(true)
+    let most = 0
+    for (let i = 0; i < 40; i++) {
+      s.engine.step()
+      most = Math.max(most, s.engine.particles.length)
+      expect(s.engine.particles.every((p) => p instanceof Particle && p.gravity < 0)).toBe(true)
+    }
+    expect(most).toBe(4)
   })
 
   it('bursts into a fireball and shards, whatever the show style', () => {
@@ -166,26 +170,80 @@ describe('Jug in a show', () => {
 describe('Fireball burst', () => {
   const c = (count = 50, seed = 1) => ({ x: 400, y: 300, hue: 200, count, options: defaultOptions(), random: new Random(seed) })
 
-  it('fits its count: glow, flames, embers and smoke', () => {
+  it('fits its count: flash, glow, blue heart, flames, embers and smoke', () => {
     const parts = bursts.fireball(c(50))
     expect(parts).toHaveLength(50)
-    expect(parts[0]).toBeInstanceOf(Glow) // first, so trimming keeps it
+    expect(parts[0]).toBeInstanceOf(Flash) // first, so trimming keeps it
+    expect(parts[1]).toBeInstanceOf(Glow)
     expect(parts.filter((p) => p instanceof Particle).every((p) => p.hue >= 25 && p.hue <= 45)).toBe(true)
   })
 
-  it('flames rise, swell, cool from yellow to red and die', () => {
+  it('flames rise, swell, cool from blue-white through orange-yellow to red and die', () => {
     const f = new Flame({ x: 0, y: 0, angle: 0, speed: 0, radius: 10, life: 60 })
-    const start = { hue: f.hue, light: f.lightness, radius: f.radius, alpha: f.alpha }
-    for (let i = 0; i < 30; i++) f.update()
+    const start = { colour: f.colour, radius: f.radius, alpha: f.alpha }
+    const [r0, g0, b0] = start.colour
+    expect(b0).toBeGreaterThan(r0) // blue-white
+    expect(g0).toBeGreaterThan(200)
+    for (let i = 0; i < 12; i++) f.update()
+    const [r1, g1, b1] = f.colour
+    expect(r1).toBe(255) // orange-yellow
+    expect(g1).toBeGreaterThan(120)
+    expect(b1).toBeLessThan(120)
+    for (let i = 0; i < 18; i++) f.update()
     expect(f.y).toBeLessThan(-5)
-    expect(f.hue).toBeLessThan(start.hue)
-    expect(f.lightness).toBeLessThan(start.light)
     expect(f.radius).toBeGreaterThan(start.radius)
     expect(f.alpha).toBeLessThan(start.alpha)
-    expect(start.hue).toBeGreaterThanOrEqual(50) // yellow
     for (let i = 0; i < 30; i++) f.update()
     expect(f.dead).toBe(true)
-    expect(f.hue).toBe(0) // red at the end
+    const [r2, g2, b2] = f.colour
+    expect(r2).toBeGreaterThan(g2 * 3) // red at the end
+    expect(b2).toBeLessThan(20)
+  })
+
+  it('has a blue heart that grows with the ball and fades as it turns orange, calm or not', () => {
+    for (const calm of [false, true]) {
+      const core = bursts.fireball({ ...c(50), calm }).find((p) => p instanceof Core)
+      expect(core).toBeInstanceOf(Core)
+      expect(core.layer).toBe('sprite') // drawn normally, so additive flames can't wash it out to white
+      core.update()
+      core.update()
+      const early = { radius: core.radius, alpha: core.alpha }
+      expect(early.alpha).toBeGreaterThan(0.4)
+      for (let i = 0; i < 10; i++) core.update()
+      expect(core.radius).toBeGreaterThan(early.radius)
+      expect(core.alpha).toBeLessThan(early.alpha)
+      while (!core.dead) core.update()
+      expect(core.age).toBe(Core.LIFE)
+    }
+  })
+
+  it('keeps the heart of the ball blue longer than its front', () => {
+    const heart = new Flame({ x: 0, y: 0, angle: 0, speed: 0, radius: 10, life: 60, blue: 1 })
+    const front = new Flame({ x: 0, y: 0, angle: 0, speed: 0, radius: 10, life: 60, blue: 0 })
+    for (let i = 0; i < 8; i++) [heart, front].forEach((f) => f.update())
+    expect(heart.colour[2]).toBeGreaterThan(front.colour[2])
+  })
+
+  it('blasts out as a round ball before it rises', () => {
+    const parts = bursts.fireball(c(200))
+    const flames = parts.filter((p) => p instanceof Flame)
+    for (let i = 0; i < 10; i++) flames.forEach((f) => f.update())
+    const far = Array(8).fill(0)
+    for (const f of flames) {
+      const sector = Math.floor(((Math.atan2(f.y - 300, f.x - 400) + Math.PI) / (Math.PI * 2)) * 8) % 8
+      far[sector] = Math.max(far[sector], Math.hypot(f.x - 400, f.y - 300))
+    }
+    expect(Math.min(...far) / Math.max(...far)).toBeGreaterThan(0.85)
+    // the middle is filled too, not just a ring
+    expect(flames.filter((f) => Math.hypot(f.x - 400, f.y - 300) < Math.max(...far) / 2).length).toBeGreaterThan(flames.length / 6)
+  })
+
+  it('goes off with a short white flash, and none under reduced motion', () => {
+    const flash = bursts.fireball(c(50))[0]
+    expect(flash).toBeInstanceOf(Flash)
+    for (let i = 0; i < Flash.LIFE; i++) flash.update()
+    expect(flash.dead).toBe(true)
+    expect(bursts.fireball({ ...c(50), calm: true }).some((p) => p instanceof Flash)).toBe(false)
   })
 
   it('smoke stays invisible until its delay passes, then rises and fades out', () => {
@@ -263,5 +321,51 @@ describe('Jug fireball size', () => {
     jug.explode(/** @type {any} */ (engine))
     expect(Jug.defaults.burstSize).toBe(3)
     expect(calls[0][4]).toBe(3)
+  })
+})
+
+describe('Jug launch spot', () => {
+  function show(options = {}) {
+    const scheduler = fakeScheduler()
+    return new Xploders(/** @type {any} */ (fakeCanvas()), { seed: 4, intensity: 0, ...options }, scheduler)
+  }
+
+  it('starts each jug at a random spot from 10% to 90% across the bottom edge', () => {
+    const s = show()
+    s.launch('jug', 60)
+    const { width, height } = s.engine
+    const xs = s.engine.projectiles.map((p) => p.x)
+    expect(xs.every((x) => x >= width * 0.1 && x <= width * 0.9)).toBe(true)
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(width * 0.5) // spread out, not all at the centre
+    expect(s.engine.projectiles.every((p) => p.y > height)).toBe(true) // just below the bottom edge
+  })
+
+  it('starts from a random spot for launchAt too, and still peaks at the clicked point', () => {
+    const s = show()
+    const xs = []
+    for (let i = 0; i < 20; i++) {
+      s.launchAt(200, 150, 'jug')
+      const j = s.engine.projectiles.at(-1)
+      xs.push(j.x)
+      expect(j.target).toEqual({ x: 200, y: 150 })
+    }
+    expect(new Set(xs.map(Math.round)).size).toBeGreaterThan(10)
+    const path = flyToBurst(s.engine.projectiles[0])
+    const [x, y] = path.at(-1)
+    expect(Math.abs(x - 200)).toBeLessThan(5)
+    expect(Math.abs(y - 150)).toBeLessThan(5)
+  })
+
+  it('takes a launchPoint range, per jug or for every jug', () => {
+    const s = show()
+    s.launch('jug', 10, { launchPoint: { min: 0, max: 5 } })
+    expect(s.engine.projectiles.every((p) => p.x <= s.engine.width * 0.05)).toBe(true)
+    expect(Jug.defaults.launchPoint).toEqual({ min: 10, max: 90 })
+  })
+
+  it('leaves rockets launching from rocketsPoint', () => {
+    const s = show()
+    s.launch(10)
+    expect(s.engine.projectiles.every((p) => p.x === s.engine.width / 2)).toBe(true)
   })
 })
