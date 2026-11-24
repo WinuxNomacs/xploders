@@ -44,6 +44,23 @@
       button[aria-pressed='true'] {
         border-color: #9ecbff;
       }
+      .bounds {
+        flex-basis: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .bounds[hidden] {
+        display: none;
+      }
+      .bounds input {
+        width: 110px;
+      }
+      .bounds output {
+        min-width: 3ch;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
       .howto {
         position: fixed;
         left: 16px;
@@ -89,6 +106,12 @@
         label {
           padding: 2px 6px;
         }
+        .bounds {
+          gap: 4px;
+        }
+        .bounds input {
+          width: 80px;
+        }
       }
     </style>
   </head>
@@ -122,10 +145,17 @@
       </label>
       <label>Intensity <input id="intensity" type="range" min="0" max="80" value="15" /></label>
       <label><input id="debug" type="checkbox" /> Boundaries</label>
+      <div class="bounds" hidden>
+        <label>Left <input id="b-left" type="range" min="0" max="800" /> <output id="b-left-value"></output></label>
+        <label>Right <input id="b-right" type="range" min="0" max="800" /> <output id="b-right-value"></output></label>
+        <label>Top <input id="b-top" type="range" min="0" max="600" /> <output id="b-top-value"></output></label>
+        <label>Bottom <input id="b-bottom" type="range" min="0" max="600" /> <output id="b-bottom-value"></output></label>
+      </div>
     </div>
     <details class="howto">
       <summary>How to use</summary>
       <p>Click or tap the sky to launch at that spot. It launches what you picked last (Fireworks, Chicken, Jug-o-BOOM or Cow), fireworks until you pick.</p>
+      <p>Check Boundaries to see where fireworks burst. Drag its edges or corners, or use the sliders, to change it.</p>
       <pre><code>import { Xploders } from 'xploders'
 
 const show = new Xploders(document.querySelector('.sky'))

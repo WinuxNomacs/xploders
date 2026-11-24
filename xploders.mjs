@@ -846,17 +846,32 @@ var _Engine = class _Engine {
     if (!Cls || this.width <= 0 || this.height <= 0) return;
     const o = this.options;
     const r = this.random;
-    const b = o.boundaries;
+    const a = this.targetArea();
     for (let i = 0; i < count && this.projectiles.length < o.maxProjectiles; i++) {
       const x = this.width * inRange(r, o.rocketsPoint, true) / 100;
       const target = this.pointer?.target() ?? {
-        x: r.int(Math.min(b.x, b.width - b.x * 2), Math.max(b.x, b.width - b.x * 2)),
-        y: r.int(Math.min(b.y, b.height * 0.5), Math.max(b.y, b.height * 0.5))
+        x: r.int(Math.min(a.left, a.right), Math.max(a.left, a.right)),
+        y: r.int(Math.min(a.top, a.bottom), Math.max(a.top, a.bottom))
       };
       const size = { width: this.width, height: this.height };
       const hue = inRange(r, o.hue, true);
       this.projectiles.push(new Cls({ x, y: this.height, target, size, hue, options: o, random: r, engine: this, ...extra }));
     }
+  }
+  /**
+   * Where random targets go, CSS px from the canvas's top left: `boundaries` margins,
+   * with fireworks-js's box (right margin twice `x`, bottom at half the height) where
+   * `right` or `bottom` is null.
+   * @returns {{left: number, top: number, right: number, bottom: number}}
+   */
+  targetArea() {
+    const b = this.options.boundaries;
+    return {
+      left: b.x,
+      top: b.y,
+      right: b.right == null ? b.width - b.x * 2 : b.width - b.right,
+      bottom: b.bottom == null ? b.height * 0.5 : b.height - b.bottom
+    };
   }
   /**
    * Adds an explosion's particles, trimmed to fit under `maxParticles`.
@@ -901,10 +916,12 @@ var _Engine = class _Engine {
     ctx.drawImage(this.trail, 0, 0);
     ctx.restore();
     if (o.boundaries.debug) {
-      const b = o.boundaries;
+      const a = this.targetArea();
       ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
       ctx.lineWidth = 1;
-      ctx.strokeRect(b.x, b.y, b.width - b.x * 3, b.height * 0.5 - b.y);
+      ctx.strokeRect(a.left, a.top, a.right - a.left, a.bottom - a.top);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      for (const x of [a.left, a.right]) for (const y of [a.top, a.bottom]) ctx.fillRect(x - 3, y - 3, 6, 6);
     }
     this.drawLayer(ctx, "sprite");
   }
@@ -969,7 +986,7 @@ function defaultOptions() {
     lineWidth: { trace: { min: 1, max: 2 }, explosion: { min: 1, max: 3 } },
     lineStyle: "round",
     opacity: 0.5,
-    boundaries: { x: 50, y: 50, width: 0, height: 0, debug: false },
+    boundaries: { x: 50, y: 50, right: null, bottom: null, width: 0, height: 0, debug: false },
     autoresize: true,
     burst: "peony",
     maxParticles: 4e3,
@@ -2264,6 +2281,13 @@ var _Xploders = class _Xploders {
       if (this.canvas.clientHeight !== height) this.canvas.style.height = `${height}px`;
     }
     return this;
+  }
+  /**
+   * Where random targets go: the `boundaries` box, CSS px from the canvas's top left.
+   * @returns {{left: number, top: number, right: number, bottom: number}}
+   */
+  get targetArea() {
+    return this.engine.targetArea();
   }
   /** @param {Partial<import('./options.js').Boundaries>} boundaries */
   updateBoundaries(boundaries) {
