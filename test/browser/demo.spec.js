@@ -123,6 +123,59 @@ test('a moving chicken leaves no ghost, while the same chicken on the trail laye
   expect(result.trail.sum).toBeGreaterThan(0)
 })
 
+test('with Pointer on, holding and dragging on the sky launches at the pointer; releasing over the panel ends it', async ({ page }) => {
+  await page.goto('/demo/')
+  await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
+  await page.getByRole('button', { name: 'Pointer: off' }).click()
+  await page.mouse.move(400, 300)
+  await page.mouse.down()
+  await expect.poll(() => count(page, 'projectiles')).toBeGreaterThan(0)
+  const first = await page.evaluate(() => window.show.engine.projectiles[0].target)
+  expect(first).toEqual({ x: 400, y: 300 })
+  await page.mouse.move(600, 250, { steps: 5 })
+  await expect
+    .poll(() => page.evaluate(() => window.show.engine.projectiles.some((p) => p.target.x === 600 && p.target.y === 250)))
+    .toBe(true)
+  // Release over the How-to panel, outside the canvas: pointer capture still ends the hold.
+  const panel = await page.locator('.howto').boundingBox()
+  await page.mouse.move(panel.x + 10, panel.y + 10, { steps: 5 })
+  expect(await page.evaluate(() => window.show.pointer.active)).toBe(true) // captured: still holding off the canvas
+  await page.mouse.up()
+  expect(await page.evaluate(() => window.show.pointer.active)).toBe(false)
+})
+
+test('a visitor asking for reduced motion gets a calm demo, and it follows the setting live', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/demo/')
+  expect(await page.evaluate(() => window.show.calm)).toBe(true)
+  await page.waitForTimeout(1500)
+  expect(await count(page, 'projectiles')).toBe(0)
+  await page.getByRole('button', { name: 'Fireworks' }).click()
+  expect(await count(page, 'projectiles')).toBe(5)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect.poll(() => page.evaluate(() => window.show.calm)).toBe(false)
+})
+
+test('the built site runs from a static host without errors', async ({ page }) => {
+  const { readFile } = await import('node:fs/promises')
+  const types = { html: 'text/html', js: 'text/javascript', mjs: 'text/javascript' }
+  await page.route('http://site.test/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/\/$/, '/index.html')
+    try {
+      const body = await readFile(`site${path}`)
+      await route.fulfill({ body, contentType: types[path.split('.').pop()] ?? 'application/octet-stream' })
+    } catch {
+      await route.fulfill({ status: 404, body: 'not found' })
+    }
+  })
+  const errors = collectErrors(page)
+  await page.goto('http://site.test/')
+  await expect.poll(() => count(page, 'particles'), { timeout: 5000 }).toBeGreaterThan(0)
+  await page.getByText('How to use').click()
+  await expect(page.getByRole('link', { name: 'README on GitHub' })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 test('the script-tag build exposes a global Xploders class', async ({ page }) => {
   await page.goto('/demo/')
   await page.evaluate(() => delete window.Xploders)

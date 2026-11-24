@@ -7,6 +7,7 @@
  * @property {number} hue firework hue chosen for this launch
  * @property {import('./options.js').Options} options the show's live options
  * @property {import('./random.js').Random} random the show's seeded generator
+ * @property {import('./engine.js').Engine} [engine] the engine it flies in (`engine.calm` is true under reduced motion)
  */
 
 /**
@@ -21,7 +22,8 @@ export class Projectile {
   static gravity = 0.15
 
   /** @param {ProjectileInit} init */
-  constructor({ x, y, target, size, hue, options, random }) {
+  constructor({ x, y, target, size, hue, options, random, engine }) {
+    this.engine = engine
     this.x = x
     this.y = y
     this.target = target

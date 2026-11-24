@@ -2,10 +2,19 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. Extras: pointer launch, reduced motion, demo site
+- **Up next:** nothing planned yet
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **Extras: pointer launch, reduced motion, demo site** (2026-11-23, branch `phase-3/extras`): fireworks-js `mouse`
+  options with pointer capture and CSS-box mapping (`src/pointer.js`), `launchAt`, `reducedMotion` with live
+  following (`src/index.js`, `engine.calm`), site build and gh-pages publishing (`scripts/build-site.js`,
+  `scripts/publish-site.js`), demo Pointer toggle and How-to panel. Tests: `test/pointer.test.js`, browser tests
+  for a real drag with release off the canvas, emulated reduced motion, and the built site. Plan kept below under
+  "Extras (done)".
+  - Pre-public review 2026-11-23, whole history: no secrets, no binary files or archives, emails only GitHub and
+    Anthropic noreply addresses, no local paths, lockfile resolves only to registry.npmjs.org.
 
 - **The flapping pixel chicken** (2026-11-23, branch `phase-2/chicken`): original art as text grids
   (`src/art/chicken.js`), `Sprite.fromPixels` and crisp sprite drawing (`src/sprite.js`), the chicken's rise/cross
@@ -204,9 +213,9 @@ are added to the page, so canvas and container targets both work. Cost of the ex
 - Measure the trail-layer copy cost (above).
 - Demo: Chicken button, plus a flight choice (random, rise, cross).
 
-## 1. Extras: pointer launch, reduced motion, demo site
+## Extras (done)
 
-Planned 2026-11-23. Branch `phase-3/extras`.
+Planned and built 2026-11-23. Branch `phase-3/extras`.
 
 ### Decisions (user, 2026-11-23)
 

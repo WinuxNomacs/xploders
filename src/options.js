@@ -11,6 +11,12 @@
  * @property {number} height set from the canvas size on resize
  * @property {boolean} debug draw the target box
  *
+ * @typedef {object} Mouse
+ * @property {boolean} click while the pointer is held on the canvas, launch towards it
+ * @property {boolean} move aim auto-launched rockets at the pointer
+ * @property {number} max projectiles in flight while holding (all kinds, as in fireworks-js)
+ * @property {string} projectile registered type the pointer launches (ours)
+ *
  * @typedef {object} Options
  * @property {number} intensity auto-launch rate: a clock advancing intensity * pi per second
  * @property {MinMax} delay launch when that clock passes a random value in this range
@@ -33,6 +39,8 @@
  * @property {boolean} autoresize follow the canvas or container size
  * @property {BurstStyle | BurstStyle[]} burst burst style, or a list to pick from per firework
  * @property {number} maxParticles cap on live particles
+ * @property {Mouse} mouse pointer launch
+ * @property {'auto' | 'always' | 'ignore'} reducedMotion calm the show when the visitor asks for reduced motion
  * @property {number} [seed] seed for a repeatable show
  */
 
@@ -67,6 +75,8 @@ export function defaultOptions() {
     autoresize: true,
     burst: 'peony',
     maxParticles: 4000,
+    mouse: { click: false, move: false, max: 1, projectile: 'rocket' },
+    reducedMotion: 'auto',
   }
 }
 

@@ -46,6 +46,7 @@ so the page shows through.
 | `start()`                     | Runs the show, auto-launching at `intensity`                                          |
 | `launch(count)`               | Launches rockets; on a stopped show, runs until the sky is empty                      |
 | `launch(type, count, init?)`  | Launches a registered type, such as `'chicken'`; `init` goes to each one             |
+| `launchAt(x, y, type?, init?)` | Launches one that explodes at (x, y), CSS px from the canvas's top left             |
 | `waitStop(dispose?)`          | Stops auto-launch; the promise resolves once everything has burnt out                 |
 | `stop(dispose?)`              | Stops and clears at once. `dispose` also stops following the size and removes a canvas the show created |
 | `pause()`                     | Freezes or resumes, keeping everything in the sky                                     |
@@ -53,7 +54,7 @@ so the page shows through.
 | `updateOptions(options)`      | Merges options into the live ones                                                     |
 | `updateSize({width, height})` | Resizes; by default to the container                                                  |
 | `updateBoundaries(b)`         | Merges into `boundaries`                                                              |
-| `isRunning`, `currentOptions` | Getters                                                                               |
+| `isRunning`, `currentOptions`, `calm` | Getters (`calm`: reduced motion is in effect)                                 |
 
 All except the getters and `waitStop` return the show, so calls chain.
 
@@ -85,9 +86,27 @@ refresh rate.
 | `autoresize`   | `true`                                   | Follow the container's size                                |
 | `burst`        | `'peony'`                                | `'peony'`, `'ring'`, `'willow'`, `'crackle'`, or a list to pick from per firework |
 | `maxParticles` | `4000`                                   | Cap on live particles                                      |
+| `mouse`        | `{click: false, move: false, max: 1, projectile: 'rocket'}` | Pointer launch, see below               |
+| `reducedMotion` | `'auto'`                                | `'auto'`, `'always'` or `'ignore'`, see below              |
 | `seed`         | random                                   | Seed for a repeatable show                                 |
 
-Not yet supported from fireworks-js: `mouse` and `sound` (planned).
+The fireworks-js `sound` option is not supported; it is ignored if passed.
+
+### Pointer launch
+
+With `mouse.click`, holding the pointer on the canvas launches rockets towards it, up to `mouse.max` in flight; the
+hold follows the pointer and ends on release, even outside the canvas. With `mouse.move`, auto-launched rockets aim at
+the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'` works).
+
+Events are read from the canvas only, as in fireworks-js. If your overlay is click-through (`pointer-events: none`),
+pointer launch doesn't fire, and the page underneath stays usable. While `click` is on, the canvas gets
+`touch-action: none` so dragging on a phone doesn't scroll.
+
+### Reduced motion
+
+When the visitor's system asks for reduced motion (`prefers-reduced-motion: reduce`), the show calms down by default:
+no auto-launch, no flickering sparks, no chicken flash. `launch()`, `launchAt()` and pointer launch still work. It
+follows the setting live. `reducedMotion: 'always'` calms the show for everyone; `'ignore'` never calms it.
 
 ### The chicken
 
@@ -169,7 +188,15 @@ npm run check                     # lint, typecheck, unit tests, build, browser 
 ```
 
 Individual steps: `npm run lint`, `npm run typecheck`, `npm test` (Vitest), `npm run build` (writes `dist/`),
-`npm run test:browser` (Playwright, starts its own server on port 8123; needs `npm run build` first).
+`npm run build:site` (builds `dist/` and the demo site in `site/`), `npm run test:browser` (Playwright, starts its
+own server on port 8123; needs `npm run build:site` first).
+
+### Demo site
+
+```sh
+npm run publish:site        # builds site/ and commits it to the gh-pages branch (does not push)
+git push origin gh-pages    # publishes it, once GitHub Pages deploys from gh-pages
+```
 
 ## Credits
 

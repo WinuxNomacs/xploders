@@ -12,6 +12,9 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
   scheduler the test drives frame by frame.
 - `npm run test:browser`: Playwright against the demo on port 8123 (it starts and stops its own server). Uses
   `dist/`, so build first.
+- `npm run build:site`: build, then the demo site in `site/` (git-ignored), loading `dist/xploders.mjs`.
+- `npm run publish:site`: builds the site and commits it to the `gh-pages` branch through a temporary worktree.
+  Never pushes; pushing `gh-pages` publishes the site (GitHub Pages deploys from that branch).
 - `npm run build`: esbuild writes `dist/xploders.mjs` (ESM) and `dist/xploders.min.js` (IIFE, global `Xploders`),
   then `tsc` writes `dist/*.d.ts`.
 
@@ -31,7 +34,10 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
   seeded shows repeat at any frame rate; draw-time randomness (flicker) uses the engine's separate `flickerRandom`.
 - Option units are per 1/60 s step, matching fireworks-js's per-frame units; `test/motion.test.js` holds a port of
   its formulas as the reference.
-- `demo/`: the dev page; the browser tests drive it through `window.show`.
+- `src/pointer.js`: the fireworks-js `mouse` options (canvas listeners, pointer capture, CSS-box mapping). Reduced
+  motion lives in `src/index.js` (`syncMotion`) and sets `engine.calm`.
+- `demo/`: the dev page; the browser tests drive it through `window.show`. `scripts/build-site.js` turns it into the
+  site by rewriting its `../src/index.js` import.
 
 ## Rules
 
@@ -39,5 +45,6 @@ JavaScript ES modules with JSDoc types; `.d.ts` generated from the JSDoc.
 - Source stays plain JS that runs in the browser unbuilt; types come from JSDoc and must pass `tsc --noEmit`
   (strict, checkJs).
 - Art: only original or properly licensed assets. No sprites ripped from games.
-- Publishing is `npm publish` by the maintainer; nothing in this repo publishes on push (no CI workflows yet).
+- Publishing is `npm publish` by the maintainer. No CI workflows: pushing `main` runs nothing; pushing `gh-pages`
+  updates the demo site once Pages is set to deploy from it.
 - Roadmap and decisions: `upcoming-changes.md`.

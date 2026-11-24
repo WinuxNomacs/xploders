@@ -228,3 +228,6 @@ test-results/
 playwright-report/
 blob-report/
 .shot.mjs
+
+# Built demo site (published to the gh-pages branch)
+site/
