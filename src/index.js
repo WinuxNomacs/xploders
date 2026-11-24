@@ -6,10 +6,12 @@ import { Particle } from './particle.js'
 import { Rocket } from './projectiles/rocket.js'
 import { Chicken } from './projectiles/chicken.js'
 import { Jug } from './projectiles/jug.js'
+import { Cow } from './projectiles/cow.js'
 import { bursts } from './bursts.js'
 import { Sprite, parsePixels } from './sprite.js'
 import { Feather } from './feather.js'
 import { Shard } from './shard.js'
+import { Milk } from './milk.js'
 import { Flame, Glow, Smoke } from './fireball.js'
 import { Pointer } from './pointer.js'
 
@@ -18,12 +20,14 @@ export {
   Particle,
   Feather,
   Shard,
+  Milk,
   Flame,
   Glow,
   Smoke,
   Rocket,
   Chicken,
   Jug,
+  Cow,
   Sprite,
   Random,
   bursts,
@@ -39,6 +43,7 @@ export {
  * @typedef {import('./projectile.js').ProjectileInit} ProjectileInit
  * @typedef {import('./projectiles/chicken.js').ChickenOptions} ChickenOptions
  * @typedef {import('./projectiles/jug.js').JugOptions} JugOptions
+ * @typedef {import('./projectiles/cow.js').CowOptions} CowOptions
  */
 
 /** @type {Map<string, ProjectileClass>} */
@@ -46,6 +51,7 @@ const registry = new Map()
 registry.set('rocket', Rocket)
 registry.set('chicken', Chicken)
 registry.set('jug', Jug)
+registry.set('cow', Cow)
 
 /** @param {Element} el @returns {el is HTMLCanvasElement} */
 const isCanvas = (el) => typeof (/** @type {any} */ (el).getContext) === 'function'

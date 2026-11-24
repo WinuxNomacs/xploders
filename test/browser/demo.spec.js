@@ -104,6 +104,21 @@ test('a Jug-o-BOOM is lobbed up tumbling, bursts into a fireball and shards, and
   expect(errors).toEqual([])
 })
 
+test('a cow floats up, Moo!s with its bubble, explodes into steaks, milk and sparks, and leaves an empty sky', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/demo/')
+  await page.evaluate(() => window.show.updateOptions({ intensity: 0 }).clear())
+  await page.getByRole('button', { name: 'Cow' }).click()
+  expect(await page.locator('#cow').getAttribute('aria-pressed')).toBe('true')
+  expect(await page.evaluate(() => window.show.engine.projectiles[0].constructor.name)).toBe('Cow')
+  await expect.poll(() => page.evaluate(() => window.show.engine.projectiles[0]?.phase), { timeout: 10000, intervals: [50] }).toBe('moo')
+  const kinds = () => page.evaluate(() => [...new Set(window.show.engine.particles.map((p) => p.constructor.name))].sort())
+  await expect.poll(kinds, { timeout: 10000, intervals: [100] }).toEqual(expect.arrayContaining(['Milk', 'Particle', 'Shard']))
+  expect(await count(page, 'projectiles')).toBe(0)
+  await expect.poll(() => count(page, 'particles'), { timeout: 15000 }).toBe(0)
+  expect(errors).toEqual([])
+})
+
 test('a moving chicken leaves no ghost, while the same chicken on the trail layer would', async ({ page }) => {
   await page.goto('/demo/')
   const result = await page.evaluate(() => {
@@ -170,6 +185,10 @@ test('a click on the sky fires the last selected type at that spot, fireworks by
   await page.getByRole('button', { name: 'Jug-o-BOOM' }).click()
   await page.mouse.click(600, 250)
   expect(await last()).toEqual({ type: 'Jug', target: { x: 600, y: 250 } })
+
+  await page.getByRole('button', { name: 'Cow' }).click()
+  await page.mouse.click(450, 280)
+  expect(await last()).toEqual({ type: 'Cow', target: { x: 450, y: 280 } })
 
   // Not blocked by a sky full of rockets, and clicks on the controls launch nothing.
   await page.evaluate(() => window.show.launch(20))

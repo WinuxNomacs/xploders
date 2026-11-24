@@ -2,11 +2,20 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** 1. The exploding cow (details below)
-- **Then:** 2. Demo boundaries editor; 3. Saturn and Shapes bursts; 4. Animals burst
+- **Up next:** 1. Demo boundaries editor (details below)
+- **Then:** 2. Saturn and Shapes bursts; 3. Animals burst
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
+
+- **The exploding cow** (2026-11-24, branch `phase-7/cow`): original black-and-white cow, its "MOO!" bubble and
+  grilled T-bones (`src/art/cow.js`), the font moved to `src/art/font.js` with variable-width glyphs (a 5-wide M,
+  which the jug's "BOOM" now uses too) and "!"; the cow's float, hover, Moo! and explosion with the bubble kept on
+  screen (`src/projectiles/cow.js`), milk splashes (`src/milk.js`), steaks as `Shard`s with their own sprite
+  (`src/shard.js`), registered as `'cow'`, demo Cow button and click to fire. Tests: `test/cow.test.js` (art, start
+  spot, phases and timings, calm, bubble placement at the edges, explosion and cap, pieces falling), browser tests
+  for a cow's whole life and click to fire with Cow. Seen in headless Chromium on the dark demo, a white page, at
+  the right edge and on a phone. Plan kept below.
 
 - **Jug launch spots and the new fireball** (2026-11-24, branch `phase-6/jug-spots-fireball`): jugs start at a
   random spot 10-90% across the bottom edge, clicks on the sky included (`launchPoint` in `Jug.defaults`,
@@ -153,7 +162,7 @@ and cool from white-yellow to red, gold embers, then smoke; scaled by `burstSize
   absent when calm; the flames' early positions lie near one circle; flame colour starts blue and ends red. A visual
   check in a real browser of the blast frame by frame.
 
-## 1. The exploding cow
+## The exploding cow (done)
 
 Request (`new.md`, 2026-11-24): "add exploding cows that appear to Moo! excitedly just before they explode into
 fireworks, steaks and milk splatters". Builds on the projectile API (`src/projectile.js`, `moveTo`), pixel sprites
@@ -175,6 +184,8 @@ steaks, and the demo's launch buttons and click to fire.
 
 ### Design
 
+- As built: steaks are `Shard`s with a steak sprite rather than a new `src/steak.js`; the M in the font became 5
+  pixels wide, since a 3-wide M read as H.
 - Original pixel art (`src/art/cow.js`, text grids for `Sprite.fromPixels`): side view facing right, about 24x16
   sprite pixels at scale 3 by default; frames 0-3 legs kicking as it floats, 4-5 excited (eyes wide, mouth open).
   The speech bubble is its own sprite, "MOO!" from the 3x5 font (moved to a shared `src/art/font.js`, adding M and
@@ -199,7 +210,7 @@ steaks, and the demo's launch buttons and click to fire.
 - Browser: a cow's whole life in the demo without errors; the Cow button and click to fire with Cow picked.
 - Seen in a real browser frame by frame: the art, the bubble, the explosion on the dark demo and on a light page.
 
-## 2. Demo boundaries editor
+## 1. Demo boundaries editor
 
 Request (`new.md`, 2026-11-24): "In the demo, add sliders for resizing and moving the boundaries when Boundaries is
 checked/enabled. Also allow for the Boundaries box to be resized using the mouse on its corners and borders."
@@ -219,7 +230,7 @@ Open decisions (to ask when planning):
 - Whether the demo still moves the top below the controls panel once the user has set it by hand.
 - Moving the whole box by dragging its middle, or only resizing from corners and edges.
 
-## 3. Saturn and Shapes bursts
+## 2. Saturn and Shapes bursts
 
 Requests (`new.md`, 2026-11-24): "Add a burst type called Saturn that explodes a spehere of one color inside
 exploding rings of another color"; "Add a burst type called Shapes that explodes fireworks in random shapes,
@@ -237,12 +248,12 @@ Open decisions (to ask when planning):
 - Saturn: how the second colour is chosen (opposite on the colour wheel, or random), and one ring or several.
 - Shapes: which shapes are in the set, and whether they are flat outlines or filled.
 
-## 4. Animals burst
+## 3. Animals burst
 
 Request (`new.md`, 2026-11-24): "Add a burst type called Animals that explodes fireworks in the shapes of random zoo
 animals".
 
-Builds on: the Shapes burst (phase 3), whose outline-to-particles code it reuses with animal outlines.
+Builds on: the Shapes burst (phase 2), whose outline-to-particles code it reuses with animal outlines.
 
 Proposed: `'animals'`, outlines drawn by us as point lists (original art, per the repo rules), one picked at random
 per burst; in the Burst menu.

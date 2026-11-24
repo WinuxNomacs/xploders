@@ -1,7 +1,7 @@
 import { Sprite } from './sprite.js'
 import { palette, shardFrames } from './art/jug.js'
 
-const sprite = Sprite.fromPixels(shardFrames, palette)
+const jugShards = Sprite.fromPixels(shardFrames, palette)
 
 /**
  * @typedef {object} ShardInit
@@ -9,11 +9,12 @@ const sprite = Sprite.fromPixels(shardFrames, palette)
  * @property {number} y
  * @property {number} scale CSS px per sprite pixel
  * @property {import('./random.js').Random} random
+ * @property {Sprite} [sprite] its pictures, one picked at random; stoneware shards by default
  */
 
 /**
- * A piece of an exploded jug: flies out, tumbles and falls, fading near the
- * end. Heavier than a feather. Drawn crisp on the sprite layer. Units are per
+ * A piece of an exploded jug (or a cow's steak): flies out, tumbles and falls,
+ * fading near the end. Heavier than a feather. Drawn crisp on the sprite layer. Units are per
  * 1/60 s step.
  */
 export class Shard {
@@ -21,7 +22,7 @@ export class Shard {
   static FADE_STEPS = 30
 
   /** @param {ShardInit} init */
-  constructor({ x, y, scale, random: r }) {
+  constructor({ x, y, scale, random: r, sprite = jugShards }) {
     const angle = r.range(0, Math.PI * 2)
     const speed = r.range(2, 7)
     this.x = x
@@ -29,7 +30,8 @@ export class Shard {
     this.vx = Math.cos(angle) * speed
     this.vy = Math.sin(angle) * speed - 2.5 // thrown upward a little
     this.scale = scale
-    this.frame = r.int(0, shardFrames.length - 1)
+    this.sprite = sprite
+    this.frame = r.int(0, sprite.frames - 1)
     this.rotation = r.range(0, Math.PI * 2)
     this.spin = r.range(-0.3, 0.3) // rad/step
     this.life = r.int(70, 110)
@@ -54,6 +56,6 @@ export class Shard {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const alpha = Math.min(1, (this.life - this.age) / Shard.FADE_STEPS)
-    sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation })
+    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation })
   }
 }

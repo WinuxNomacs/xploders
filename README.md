@@ -6,8 +6,8 @@ here.
 
 **Live demo: <https://winuxnomacs.com/xploders/>**
 
-In the demo, click or tap the sky to launch at that spot: it launches whatever you picked last (Fireworks, Chicken or
-Jug-o-BOOM), fireworks until you pick. The demo starts at intensity 15; the library default is 30.
+In the demo, click or tap the sky to launch at that spot: it launches whatever you picked last (Fireworks, Chicken,
+Jug-o-BOOM or Cow), fireworks until you pick. The demo starts at intensity 15; the library default is 30.
 
 > Early development; see [upcoming-changes.md](upcoming-changes.md) for what's next.
 
@@ -39,6 +39,7 @@ show.start() // auto-launches at `intensity`
 show.launch(5) // five more rockets
 show.launch('chicken') // a chicken that explodes into fireworks
 show.launch('jug') // a Jug-o-BOOM that bursts into a fireball
+show.launch('cow') // a cow that Moo!s, then explodes into fireworks, steaks and milk
 await show.waitStop() // stop launching, resolve once the sky is empty
 ```
 
@@ -52,7 +53,7 @@ layout (`width: 100%`), otherwise it keeps the size it had when the show started
 | ----------------------------- | ------------------------------------------------------------------------------------ |
 | `start()`                     | Runs the show, auto-launching at `intensity`                                          |
 | `launch(count)`               | Launches rockets; on a stopped show, runs until the sky is empty                      |
-| `launch(type, count, init?)`  | Launches a registered type, `'chicken'` or `'jug'`; `init` goes to each one          |
+| `launch(type, count, init?)`  | Launches a registered type, `'chicken'`, `'jug'` or `'cow'`; `init` goes to each one |
 | `launchAt(x, y, type?, init?)` | Launches one that explodes at (x, y), CSS px from the canvas's top left             |
 | `waitStop(dispose?)`          | Stops auto-launch; the promise resolves once everything has burnt out                 |
 | `stop(dispose?)`              | Stops and clears at once. `dispose` also stops following the size and removes a canvas the show created |
@@ -104,7 +105,7 @@ The fireworks-js `sound` option is not supported; it is ignored if passed.
 
 With `mouse.click`, holding the pointer on the canvas launches rockets towards it, up to `mouse.max` in flight; the
 hold follows the pointer and ends on release, even outside the canvas. With `mouse.move`, auto-launched rockets aim at
-the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'` and `'jug'` work; an unknown name logs a warning
+the pointer while it is over the canvas. `mouse.projectile` picks what the pointer launches (`'chicken'`, `'jug'` and `'cow'` work; an unknown name logs a warning
 and launches nothing).
 
 Events are read from the canvas only, as in fireworks-js. If your overlay is click-through (`pointer-events: none`),
@@ -114,7 +115,7 @@ pointer launch doesn't fire, and the page underneath stays usable. While `click`
 ### Reduced motion
 
 When the visitor's system asks for reduced motion (`prefers-reduced-motion: reduce`), the show calms down by default:
-no auto-launch, no flickering sparks, no chicken flash, no fireball flash. `launch()`, `launchAt()` and pointer launch still work. It
+no auto-launch, no flickering sparks, no chicken flash, no fireball flash, no shaking cow. `launch()`, `launchAt()` and pointer launch still work. It
 follows the setting live. `reducedMotion: 'always'` calms the show for everyone; `'ignore'` never calms it.
 
 ### The chicken
@@ -172,6 +173,38 @@ it has no white flash or glow.
 
 To use your own art, replace `Jug.sprite` with a sprite of the same layout: frames 0-2 the wick flame flickering,
 upright, wick at the top.
+
+### The cow
+
+An original pixel-art black-and-white dairy cow. It floats up from a random spot along the bottom edge, legs kicking,
+slows and hovers at its target, then Moo!s excitedly: a "MOO!" speech bubble pops up beside its head while it bounces
+and shakes with its mouth open. Then it explodes into a firework burst in the show's `burst` style, grilled T-bone
+steaks and splashes of milk.
+
+```js
+import { Cow } from 'xploders'
+
+show.launch('cow')
+show.launch('cow', 2, { scale: 4, mooSteps: 60 }) // bigger, and Moo!s for a whole second
+Cow.defaults.steaks = 12 // change the default for every cow
+```
+
+| Option        | Default              | Meaning                                                               |
+| ------------- | -------------------- | --------------------------------------------------------------------- |
+| `scale`       | `3`                  | CSS pixels per sprite pixel (the sprite is 24x16)                     |
+| `speed`       | `3`                  | Average px per 1/60 s on the way up; it slows as it arrives           |
+| `hoverSteps`  | `18`                 | Hover at the target before the Moo!, in 1/60 s steps                  |
+| `mooSteps`    | `30`                 | Moo! before the explosion, in 1/60 s steps                            |
+| `steaks`      | `8`                  | T-bone steaks in the explosion (they count towards `maxParticles`)    |
+| `milk`        | `16`                 | Milk splashes in the explosion (they count towards `maxParticles`)    |
+| `launchPoint` | `{min: 10, max: 90}` | Where along the bottom edge it starts, percent of width, random in this range |
+
+The speech bubble sits above the head on the side the cow faces, and moves to the other side, or inside the canvas,
+near an edge. Under reduced motion the cow doesn't bounce or shake; the bubble still shows. The milk has a faint
+blue-grey edge, so it shows on a white page too.
+
+To use your own art, replace `Cow.sprite` with a sprite of the same layout: frames 0-3 the legs kicking, 4-5 excited,
+facing right. `Cow.bubble` is the speech bubble: frame 0 with its tail on the left, 1 on the right.
 
 ### Pixel sprites
 

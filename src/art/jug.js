@@ -3,6 +3,8 @@
 // widths per row) and painted into text grids, so the lettering can be stamped
 // from a small font; the result is ordinary text grids for Sprite.fromPixels.
 
+import { stamp, textWidth } from './font.js'
+
 /** @type {Record<string, string | null>} */
 export const palette = {
   '.': null,
@@ -37,17 +39,6 @@ const halfWidths = [2, 2, 2, 3, 4, 6, 8, 10, 11, 12, 13, ...Array(16).fill(14), 
 export const HEIGHT = CORK_ROW + halfWidths.length
 /** The glaze covers the cork-down rows before this one (with a few drips into it). */
 const GLAZE_END = CORK_ROW + 11
-
-/** 3x5 pixel font, just the letters on the jug. */
-const font = {
-  J: ['..#', '..#', '..#', '#.#', '.##'],
-  U: ['#.#', '#.#', '#.#', '#.#', '###'],
-  G: ['.##', '#..', '#.#', '#.#', '.##'],
-  O: ['.#.', '#.#', '#.#', '#.#', '.#.'],
-  B: ['##.', '#.#', '##.', '#.#', '##.'],
-  M: ['#.#', '###', '#.#', '#.#', '#.#'],
-  '-': ['...', '...', '###', '...', '...'],
-}
 
 /** The lettering: text, colour, top row. */
 export const lettering = [
@@ -119,17 +110,7 @@ function paintJug() {
   g[CORK_ROW - 1][CENTER + 1] = 'r'
   g[CORK_ROW - 2][CENTER] = 'r'
   // Lettering, centred.
-  for (const { text, colour, row } of lettering) {
-    const width = text.length * 4 - 1
-    let x0 = CENTER - Math.floor(width / 2)
-    for (const ch of text) {
-      const glyph = font[/** @type {keyof typeof font} */ (ch)]
-      glyph.forEach((line, dy) => {
-        for (let dx = 0; dx < 3; dx++) if (line[dx] === '#') g[row + dy][x0 + dx] = colour
-      })
-      x0 += 4
-    }
-  }
+  for (const { text, colour, row } of lettering) stamp(g, text, colour, CENTER - Math.floor(textWidth(text) / 2), row)
   return g
 }
 
