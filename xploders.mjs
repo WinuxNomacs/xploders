@@ -68,10 +68,10 @@ var _Random = class _Random {
   }
   /** @returns {number} a float in [0, 1) */
   next() {
-    let t = this.state = this.state + 1831565813 >>> 0;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    let t2 = this.state = this.state + 1831565813 >>> 0;
+    t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
+    t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
+    return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
   }
   /**
    * @param {number} min
@@ -106,7 +106,7 @@ function inRange(random, { min, max }, integer = false) {
 __name(inRange, "inRange");
 
 // src/sprite.js
-function parsePixels(frames3, palette6) {
+function parsePixels(frames3, palette7) {
   if (frames3.length === 0) throw new Error("xploders: a sprite needs at least one frame");
   const frameHeight = frames3[0].length;
   const frameWidth = frames3[0][0]?.length ?? 0;
@@ -114,7 +114,7 @@ function parsePixels(frames3, palette6) {
   const width = frameWidth * frames3.length;
   const data = new Uint8ClampedArray(width * frameHeight * 4);
   const colours = /* @__PURE__ */ new Map();
-  for (const [ch, css] of Object.entries(palette6)) colours.set(ch, css === null ? null : hexToRgb(css));
+  for (const [ch, css] of Object.entries(palette7)) colours.set(ch, css === null ? null : hexToRgb(css));
   frames3.forEach((rows, f) => {
     if (rows.length !== frameHeight) throw new Error(`xploders: frame ${f} has ${rows.length} rows, expected ${frameHeight}`);
     rows.forEach((row, y) => {
@@ -184,8 +184,8 @@ var _Sprite = class _Sprite {
    * @param {Record<string, string | null>} palette
    * @param {number} [fps]
    */
-  static fromPixels(frames3, palette6, fps = 8) {
-    const pixels = parsePixels(frames3, palette6);
+  static fromPixels(frames3, palette7, fps = 8) {
+    const pixels = parsePixels(frames3, palette7);
     const sprite = new _Sprite(null, { ...pixels, fps });
     sprite.pixels = pixels;
     return sprite;
@@ -292,7 +292,7 @@ var BLUE_WHITE = (
   /** @type {[number, number, number]} */
   [185, 210, 255]
 );
-function flameColour(t, hold) {
+function flameColour(t2, hold) {
   const keys = (
     /** @type {[number, [number, number, number]][]} */
     [
@@ -304,10 +304,10 @@ function flameColour(t, hold) {
     ]
   );
   let i = 1;
-  while (i < keys.length - 1 && t > keys[i][0]) i++;
+  while (i < keys.length - 1 && t2 > keys[i][0]) i++;
   const [a, ca] = keys[i - 1];
   const [b, cb] = keys[i];
-  const f = b > a ? Math.min(1, Math.max(0, (t - a) / (b - a))) : 1;
+  const f = b > a ? Math.min(1, Math.max(0, (t2 - a) / (b - a))) : 1;
   return (
     /** @type {[number, number, number]} */
     ca.map((v, k) => Math.round(v + (cb[k] - v) * f))
@@ -398,13 +398,13 @@ var _Flash = class _Flash {
   }
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    const t = this.t;
+    const t2 = this.t;
     const dot = softDot("flash", [
       [0, "rgba(255, 255, 255, 1)"],
       [0.35, "rgba(255, 255, 255, 0.9)"],
       [1, "rgba(255, 255, 255, 0)"]
     ]);
-    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (0.6 + 0.4 * t), (1 - t) ** 2);
+    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (0.6 + 0.4 * t2), (1 - t2) ** 2);
   }
 };
 __name(_Flash, "Flash");
@@ -481,13 +481,13 @@ var _Glow = class _Glow {
   }
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    const t = this.t;
+    const t2 = this.t;
     const dot = softDot("glow", [
       [0, "hsla(50, 100%, 90%, 1)"],
       [0.4, "hsla(30, 100%, 60%, 0.6)"],
       [1, "hsla(15, 100%, 50%, 0)"]
     ]);
-    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (1 - (1 - t) ** 3) + 1, 0.55 * (1 - t));
+    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (1 - (1 - t2) ** 3) + 1, 0.55 * (1 - t2));
   }
 };
 __name(_Glow, "Glow");
@@ -585,7 +585,7 @@ var shapes = {
   /** A flattened circle at a random tilt. */
   ellipse: /* @__PURE__ */ __name((n, r) => {
     const ratio = r.range(0.3, 0.9);
-    return { points: rotate(alongPath(sample((t) => [Math.cos(TAU * t), Math.sin(TAU * t) * ratio]), n, true), r.range(0, Math.PI)) };
+    return { points: rotate(alongPath(sample((t2) => [Math.cos(TAU * t2), Math.sin(TAU * t2) * ratio]), n, true), r.range(0, Math.PI)) };
   }, "ellipse"),
   /** A triangle, square, pentagon or hexagon at a random rotation. */
   polygon: /* @__PURE__ */ __name((n, r) => {
@@ -599,8 +599,8 @@ var shapes = {
     const path = (
       /** @type {Point[]} */
       Array.from({ length: 400 }, (_, i) => {
-        const t = i / 399;
-        return [t * Math.cos(TAU * turns * t), t * Math.sin(TAU * turns * t)];
+        const t2 = i / 399;
+        return [t2 * Math.cos(TAU * turns * t2), t2 * Math.sin(TAU * turns * t2)];
       })
     );
     return { points: rotate(alongPath(path, n, false), r.range(0, TAU)) };
@@ -608,13 +608,13 @@ var shapes = {
   /** A round face, two eyes and a smile. */
   smiley: /* @__PURE__ */ __name((n, r) => {
     const [face, left, right, smile] = split(n, [0.58, 0.07, 0.07, 0.28]);
-    const eye = /* @__PURE__ */ __name((cx, k) => alongPath(sample((t) => [cx + 0.09 * Math.cos(TAU * t), -0.3 + 0.09 * Math.sin(TAU * t)]), k, true), "eye");
+    const eye = /* @__PURE__ */ __name((cx, k) => alongPath(sample((t2) => [cx + 0.09 * Math.cos(TAU * t2), -0.3 + 0.09 * Math.sin(TAU * t2)]), k, true), "eye");
     const arc = Array.from({ length: 100 }, (_, i) => {
       const a = Math.PI * (0.2 + 0.6 * i / 99);
       return [0.55 * Math.cos(a), 0.05 + 0.5 * Math.sin(a)];
     });
     const points = [
-      ...alongPath(sample((t) => [Math.cos(TAU * t), Math.sin(TAU * t)]), face, true),
+      ...alongPath(sample((t2) => [Math.cos(TAU * t2), Math.sin(TAU * t2)]), face, true),
       ...eye(-0.35, left),
       ...eye(0.35, right),
       ...alongPath(arc, smile, false)
@@ -623,8 +623,8 @@ var shapes = {
   }, "smiley"),
   /** The classic heart curve, point down. */
   heart: /* @__PURE__ */ __name((n, r) => {
-    const path = sample((t) => {
-      const a = TAU * t;
+    const path = sample((t2) => {
+      const a = TAU * t2;
       const x = 16 * Math.sin(a) ** 3;
       const y = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
       return [x, y - 2.5];
@@ -675,7 +675,7 @@ function drawing(strokes, n) {
 }
 __name(drawing, "drawing");
 function oval(cx, cy, rx, ry = rx) {
-  return { points: sample((t) => [cx + rx * Math.cos(TAU * t), cy + ry * Math.sin(TAU * t)], 48), closed: true };
+  return { points: sample((t2) => [cx + rx * Math.cos(TAU * t2), cy + ry * Math.sin(TAU * t2)], 48), closed: true };
 }
 __name(oval, "oval");
 var SNAKE_HEAD_Y = 55 + 14 * Math.sin(84 / 11);
@@ -783,7 +783,7 @@ var animals = {
         [58, 62]
       ]
     },
-    { closed: true, points: sample((t) => [70 + (17 + 2.5 * Math.sin(TAU * 9 * t)) * Math.cos(TAU * t), 40 + (17 + 2.5 * Math.sin(TAU * 9 * t)) * Math.sin(TAU * t)], 120) },
+    { closed: true, points: sample((t2) => [70 + (17 + 2.5 * Math.sin(TAU * 9 * t2)) * Math.cos(TAU * t2), 40 + (17 + 2.5 * Math.sin(TAU * 9 * t2)) * Math.sin(TAU * t2)], 120) },
     // mane
     oval(72, 41, 9, 10),
     // face
@@ -1504,11 +1504,11 @@ __name(defaultOptions, "defaultOptions");
 var UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
 var isPlainObject = /* @__PURE__ */ __name((v) => typeof v === "object" && v !== null && !Array.isArray(v), "isPlainObject");
 function deepMerge(target, source) {
-  const t = target;
+  const t2 = target;
   for (const [key, value] of Object.entries(source)) {
     if (value === void 0 || UNSAFE_KEYS.has(key)) continue;
-    if (isPlainObject(value) && isPlainObject(t[key])) deepMerge(t[key], value);
-    else t[key] = Array.isArray(value) ? [...value] : value;
+    if (isPlainObject(value) && isPlainObject(t2[key])) deepMerge(t2[key], value);
+    else t2[key] = Array.isArray(value) ? [...value] : value;
   }
   return target;
 }
@@ -1843,8 +1843,8 @@ var LIGHT = (() => {
 function shade(nx, ny, steps, bias = 0) {
   const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
   const lit = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2] + bias;
-  const t = Math.min(1, Math.max(0, (lit + 0.25) / 1.15));
-  return Math.round((1 - t) * (steps - 1));
+  const t2 = Math.min(1, Math.max(0, (lit + 0.25) / 1.15));
+  return Math.round((1 - t2) * (steps - 1));
 }
 __name(shade, "shade");
 var _Grid = class _Grid {
@@ -1917,8 +1917,8 @@ var _Grid = class _Grid {
         if (y0 <= cy && y1 > cy || y1 <= cy && y0 > cy) xs.push(x0 + (cy - y0) / (y1 - y0) * (x1 - x0));
       }
       xs.sort((a, b) => a - b);
-      const t = bottom > top ? (cy - top) / (bottom - top) : 0;
-      const ch = ramp[Math.min(ramp.length - 1, Math.floor(t * ramp.length))];
+      const t2 = bottom > top ? (cy - top) / (bottom - top) : 0;
+      const ch = ramp[Math.min(ramp.length - 1, Math.floor(t2 * ramp.length))];
       for (let i = 0; i + 1 < xs.length; i += 2) {
         for (let x = Math.round(xs[i]); x <= Math.round(xs[i + 1]); x++) this.set(x, y, ch);
       }
@@ -2133,7 +2133,7 @@ var _Chicken = class _Chicken extends Projectile {
     const r = init.random;
     this.layer = /** @type {const} */
     "sprite";
-    this.art = pickTheme(_Chicken.themes, this.theme);
+    this.art = pickTheme(new.target.themes, this.theme);
     this.scale = init.scale ?? d.scale;
     this.speed = init.speed ?? d.speed;
     this.panicSteps = init.panicSteps ?? d.panicSteps;
@@ -2486,9 +2486,9 @@ var RETRO_HALF = [2, 2, 2, 3, 4, 6, 8, 10, 11, 12, 13, ...Array(16).fill(14), 13
 var GLAZE = "gHbBdD";
 var CREAM = "hcCsS";
 function halfWidth(y) {
-  const t = Math.min(RETRO_HALF.length - 1, Math.max(0, (y - CORK_ROW2 - 1) / K));
-  const i = Math.floor(t);
-  const f = t - i;
+  const t2 = Math.min(RETRO_HALF.length - 1, Math.max(0, (y - CORK_ROW2 - 1) / K));
+  const i = Math.floor(t2);
+  const f = t2 - i;
   const a = RETRO_HALF[i];
   const b = RETRO_HALF[Math.min(RETRO_HALF.length - 1, i + 1)];
   return (a + (b - a) * f) * K + 1;
@@ -2593,10 +2593,10 @@ function withFlame2(jug3, lean, grow) {
     const h = 15 * grow * scale + 2;
     const r = 5.5 * scale + 1;
     for (let i = 0; i <= 20; i++) {
-      const t = i / 20;
-      const cx = CENTER2 + lean * 3 * t * t;
-      const cy = base - t * h + r * 0.4;
-      const rr = r * Math.sqrt(1 - t) * (1 - 0.15 * t);
+      const t2 = i / 20;
+      const cx = CENTER2 + lean * 3 * t2 * t2;
+      const cy = base - t2 * h + r * 0.4;
+      const rr = r * Math.sqrt(1 - t2) * (1 - 0.15 * t2);
       g.ellipse(cx, cy, Math.max(0.6, rr), Math.max(0.6, rr * 0.9), ch);
     }
   }
@@ -2676,7 +2676,7 @@ var _Jug = class _Jug extends Projectile {
     const scale = init.scale ?? d.scale;
     const r = init.random;
     const x = init.size.width * inRange(r, init.launchPoint ?? d.launchPoint) / 100;
-    const art = pickTheme(_Jug.themes, init.theme ?? init.options.theme);
+    const art = pickTheme(new.target.themes, init.theme ?? init.options.theme);
     super({ ...init, x, y: init.y + art.sprite.frameHeight * art.pixelSize * scale / 2 });
     this.art = art;
     this.layer = /** @type {const} */
@@ -2770,7 +2770,7 @@ var Jug = _Jug;
 // src/milk.js
 var _Milk = class _Milk {
   /** @param {MilkInit} init */
-  constructor({ x, y, scale, random: r }) {
+  constructor({ x, y, scale, random: r, glint = false }) {
     const angle = r.range(0, Math.PI * 2);
     const speed = r.range(2, 8);
     this.x = x;
@@ -2778,6 +2778,7 @@ var _Milk = class _Milk {
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed - 2;
     this.radius = r.range(0.6, 1.3) * scale;
+    this.glint = glint;
     this.life = r.int(40, 70);
     this.age = 0;
     this.dead = false;
@@ -2813,6 +2814,16 @@ var _Milk = class _Milk {
     ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(120, 140, 170, 0.6)";
     ctx.stroke();
+    if (this.glint) {
+      ctx.beginPath();
+      ctx.ellipse(-this.radius * stretch * 0.15, this.radius * 0.35, this.radius * stretch * 0.7, this.radius * 0.45, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(190, 205, 230, 0.55)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(this.radius * stretch * 0.35, -this.radius * 0.4, this.radius * 0.35, this.radius * 0.25, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+    }
     ctx.restore();
   }
 };
@@ -2945,6 +2956,202 @@ var bubbleFrames = [bubble("left"), bubble("right")];
 var steak = ["..kkkkkk.", ".kfbbbbDk", "kDDdbDdDk", "kDdDbDDdk", "kdDDbdDDk", ".kDdbDdk.", "..kkkkk.."];
 var steakFrames = [steak, steak.map((row) => [...row].reverse().join(""))];
 
+// src/art/cow64.js
+var palette6 = {
+  ".": null,
+  k: "#1e1418",
+  // outline
+  W: "#ffffff",
+  // hide, light to dark
+  w: "#f1eee8",
+  v: "#d9d4cc",
+  s: "#b4ada3",
+  X: "#4a4450",
+  // spots, light to dark
+  x: "#2c2732",
+  z: "#17131b",
+  p: "#ffb3c2",
+  // nose, ear, udder, light to dark
+  P: "#f08aa2",
+  q: "#c45a76",
+  h: "#f6ead0",
+  // horns
+  H: "#c9b48c",
+  n: "#6b5444",
+  // hooves
+  N: "#3e2f25",
+  r: "#e8323a",
+  // open mouth
+  R: "#7a1020",
+  // the bubble
+  b: "#ffffff",
+  B: "#dfe3ec",
+  g: "#8b90a0",
+  // lettering shadow
+  // steak
+  D: "#9a5428",
+  // grilled meat, light to dark
+  d: "#7a3f1c",
+  e: "#55270f",
+  G: "#2e1408",
+  // grill marks
+  f: "#f0d3a6",
+  // fat rim
+  F: "#d4ae7c",
+  o: "#fbf6ea",
+  // bone, light to dark
+  O: "#d8cdb6"
+};
+var WIDTH4 = 72;
+var HEIGHT4 = 48;
+var HIDE = "Wwvs";
+var SPOT = "Xxz";
+var PINK = "pPq";
+var HEAD2 = { x: 61, y: 13 };
+var LEGS2 = [10, 22, 37, 49];
+function leg(g, x, kick, far) {
+  const ramp = far ? "vs" : "Wwv";
+  const foot = x + kick * 3;
+  g.polygon(
+    [
+      [x - 3, 30],
+      [x + 3, 30],
+      [foot + 3, 43],
+      [foot - 3, 43]
+    ],
+    ramp
+  );
+  g.polygon(
+    [
+      [foot - 3, 43],
+      [foot + 3, 43],
+      [foot + 3, 46],
+      [foot - 3, 46]
+    ],
+    "nN"
+  );
+}
+__name(leg, "leg");
+function cow2(kick, excited) {
+  const g = new Grid(WIDTH4, HEIGHT4);
+  leg(g, LEGS2[1], kick[1], true);
+  leg(g, LEGS2[3], kick[3], true);
+  g.line(8, 15, 5, 22, "v");
+  g.line(5, 22, 4, 29, "v");
+  g.line(9, 15, 6, 22, "s");
+  g.ellipse(4, 31, 2.2, 3, SPOT);
+  g.ellipse(30, 22, 23, 11, HIDE);
+  g.ellipse(50, 18, 8, 9, HIDE, { bias: 0.05 });
+  g.ellipse(61, 15, 8, 9, HIDE, { bias: 0.1 });
+  const onHide = /* @__PURE__ */ __name((x, y) => "Wwvs".includes(g.get(x, y)), "onHide");
+  g.ellipse(20, 17, 8, 5, SPOT, { angle: 0.3, only: onHide });
+  g.ellipse(38, 25, 6, 4.5, SPOT, { angle: -0.2, only: onHide });
+  g.ellipse(10, 24, 4, 5.5, SPOT, { only: onHide });
+  g.ellipse(46, 15, 3.5, 3, SPOT, { only: onHide });
+  g.ellipse(56.5, 8.5, 3, 2.5, SPOT, { angle: 0.4, only: onHide });
+  g.ellipse(31, 33, 4.5, 3, PINK);
+  leg(g, LEGS2[0], kick[0], false);
+  leg(g, LEGS2[2], kick[2], false);
+  g.ellipse(56, 4.5, 1.6, 2.6, "hH", { angle: -0.4 });
+  g.ellipse(67, 4.5, 1.6, 2.6, "hH", { angle: 0.4 });
+  g.ellipse(51, 9, 4, 2.2, PINK, { angle: -0.5 });
+  g.ellipse(65.5, 22, 6, 5, PINK);
+  g.set(64, 21, "q");
+  g.set(68, 21, "q");
+  if (excited) {
+    g.ellipse(62, 12, 3.2, 3.6, "k");
+    g.ellipse(62, 12, 2.2, 2.6, "W");
+    g.set(62, 12, "k");
+    g.set(62, 13, "k");
+    g.ellipse(65, 28, 4, 3, "rR");
+    g.ellipse(65.5, 29.5, 2.2, 1.3, "Pq");
+  } else {
+    g.ellipse(62.5, 12.5, 1.7, 2, "z");
+    g.set(62, 11, "W");
+    g.line(62, 26, 68, 26, "q");
+  }
+  return g.outline("k").rows();
+}
+__name(cow2, "cow");
+var floatFrames2 = [cow2([0, 0, 0, 0], false), cow2([-1, 1, -1, 1], false), cow2([0, 0, 0, 0], false), cow2([1, -1, 1, -1], false)];
+var mooFrames2 = [cow2([-1, -1, 1, 1], true), cow2([1, 1, -1, -1], true)];
+var BUBBLE_WIDTH2 = 69;
+var BUBBLE_HEIGHT2 = 36;
+var BUBBLE_BODY2 = 27;
+function bubble2(side) {
+  const g = new Grid(BUBBLE_WIDTH2, BUBBLE_HEIGHT2);
+  const near = /* @__PURE__ */ __name((x) => side === "left" ? x : BUBBLE_WIDTH2 - 1 - x, "near");
+  g.ellipse(34, 13, 32.5, 12.5, "bbbB");
+  g.polygon(
+    [
+      [near(10), BUBBLE_BODY2 - 6],
+      [near(18), BUBBLE_BODY2 - 3],
+      [near(4), BUBBLE_HEIGHT2 - 2]
+    ],
+    "bB"
+  );
+  const k = 3;
+  const text = "MOO!";
+  const width = [...text].reduce((w, ch) => w + (font[ch][0].length + 1) * k, -k);
+  for (
+    const [dx, dy, ink] of
+    /** @type {[number, number, string][]} */
+    [
+      [1, 1, "g"],
+      [0, 0, "k"]
+    ]
+  ) {
+    let x0 = 35 - Math.floor(width / 2);
+    for (const ch of text) {
+      const glyph = font[ch];
+      glyph.forEach((line, gy) => {
+        for (let gx = 0; gx < line.length; gx++) {
+          if (line[gx] !== "#") continue;
+          for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) g.set(x0 + gx * k + i + dx, 6 + gy * k + j + dy, ink);
+        }
+      });
+      x0 += (glyph[0].length + 1) * k;
+    }
+  }
+  return g.outline("k").rows();
+}
+__name(bubble2, "bubble");
+var bubbleFrames2 = [bubble2("left"), bubble2("right")];
+function steak2() {
+  const g = new Grid(27, 21);
+  g.ellipse(13, 10.5, 12, 8.5, "fF");
+  g.ellipse(13.5, 11, 10.5, 7, "Dde", { bias: 0.1 });
+  for (const off of [-8, -2, 4, 10]) {
+    for (let i = 0; i <= 14; i++) {
+      const x = Math.round(7 + off + 4 * i / 14);
+      const y = 4 + i;
+      if ("Dde".includes(g.get(x, y))) g.set(x, y, "G");
+    }
+  }
+  g.polygon(
+    [
+      [6, 5],
+      [20, 5],
+      [20, 7],
+      [6, 7]
+    ],
+    "oO"
+  );
+  g.polygon(
+    [
+      [12, 7],
+      [14, 7],
+      [14, 17],
+      [12, 17]
+    ],
+    "oO"
+  );
+  return g.outline("k").rows();
+}
+__name(steak2, "steak");
+var t = steak2();
+var steakFrames2 = [t, t.map((row) => [...row].reverse().join(""))];
+
 // src/projectiles/cow.js
 var LEG_FPS = 10;
 var MOO_FPS = 12;
@@ -2958,7 +3165,7 @@ var _Cow = class _Cow extends Projectile {
     super({ ...init, x });
     this.layer = /** @type {const} */
     "sprite";
-    this.art = pickTheme(_Cow.themes, this.theme);
+    this.art = pickTheme(new.target.themes, this.theme);
     this.scale = scale;
     this.speed = init.speed ?? d.speed;
     this.hoverSteps = init.hoverSteps ?? d.hoverSteps;
@@ -3016,7 +3223,7 @@ var _Cow = class _Cow extends Projectile {
     const { x, y, random } = this;
     engine.addParticles([
       ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: this.art.steaks, pixelSize: this.art.pixelSize })),
-      ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random }))
+      ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random, glint: this.art.milkGlint }))
     ]);
   }
   /** Index into its theme's sprite for the current step. */
@@ -3032,11 +3239,11 @@ var _Cow = class _Cow extends Projectile {
   bubblePlace() {
     const s = this.scale * this.art.pixelSize;
     const pop = Math.min(1, 0.6 + 0.1 * this.phaseAge);
-    const { sprite, head, bubble: bubble2 } = this.art;
+    const { sprite, head, bubble: bubble3 } = this.art;
     const headX = this.x + (this.flip ? -1 : 1) * (head.x + 0.5 - sprite.frameWidth / 2) * s;
     const headY = this.y + (head.y + 0.5 - sprite.frameHeight / 2) * s;
-    const w = bubble2.frameWidth * s;
-    const h = bubble2.frameHeight * s;
+    const w = bubble3.frameWidth * s;
+    const h = bubble3.frameHeight * s;
     const reach = w / 2 - s;
     let right = !this.flip;
     if (right && headX + reach + w / 2 > this.size.width) right = false;
@@ -3071,13 +3278,21 @@ __publicField(
   }
 );
 /**
- * Art per theme (only retro so far, so every theme falls back to it). Frames 0-3 legs kicking,
- * 4-5 excited (mouth open), facing right. `bubble`: frame 0 with its tail on the left (for a
- * bubble right of the head), 1 on the right. `steaks`: the T-bones. `head`: where the head is,
- * in sprite pixels, for placing the bubble.
- * @type {Record<string, import('../themes.js').ThemeArt & {bubble: Sprite, steaks: Sprite, head: {x: number, y: number}}>}
+ * Art per theme. Frames 0-3 legs kicking, 4-5 excited (mouth open), facing right. `bubble`:
+ * frame 0 with its tail on the left (for a bubble right of the head), 1 on the right. `steaks`:
+ * the T-bones. `head`: where the head is, in sprite pixels, for placing the bubble. `milkGlint`:
+ * shiny milk. Replace a theme's art, or add a theme under a new name.
+ * @type {Record<string, import('../themes.js').ThemeArt & {bubble: Sprite, steaks: Sprite, head: {x: number, y: number}, milkGlint?: boolean}>}
  */
 __publicField(_Cow, "themes", {
+  "64bit": {
+    sprite: Sprite.fromPixels([...floatFrames2, ...mooFrames2], palette6),
+    pixelSize: 1 / 3,
+    bubble: Sprite.fromPixels(bubbleFrames2, palette6),
+    steaks: Sprite.fromPixels(steakFrames2, palette6),
+    head: HEAD2,
+    milkGlint: true
+  },
   retro: {
     sprite: Sprite.fromPixels([...floatFrames, ...mooFrames], palette5),
     pixelSize: 1,
