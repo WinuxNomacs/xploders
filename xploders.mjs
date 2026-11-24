@@ -105,267 +105,6 @@ function inRange(random, { min, max }, integer = false) {
 }
 __name(inRange, "inRange");
 
-// src/fireball.js
-var _Flame = class _Flame {
-  /** @param {FlameInit} init */
-  constructor({ x, y, angle, speed, radius, life }) {
-    this.x = x;
-    this.y = y;
-    this.vx = Math.cos(angle) * speed;
-    this.vy = Math.sin(angle) * speed;
-    this.radius0 = radius;
-    this.life = life;
-    this.age = 0;
-    this.dead = false;
-    this.layer = "trail";
-  }
-  /** @returns {number} 0 at birth, 1 at death */
-  get t() {
-    return Math.min(1, this.age / this.life);
-  }
-  get hue() {
-    return 55 * (1 - this.t);
-  }
-  get lightness() {
-    return 92 - 50 * this.t;
-  }
-  get radius() {
-    return this.radius0 * (0.6 + 0.9 * this.t);
-  }
-  get alpha() {
-    return (1 - this.t) ** 1.5;
-  }
-  /** @returns {boolean} never pops */
-  update() {
-    this.vx *= _Flame.FRICTION;
-    this.vy = this.vy * _Flame.FRICTION - _Flame.BUOYANCY;
-    this.x += this.vx;
-    this.y += this.vy;
-    this.age++;
-    if (this.age >= this.life) this.dead = true;
-    return false;
-  }
-  /** @param {CanvasRenderingContext2D} ctx */
-  draw(ctx) {
-    const r = this.radius;
-    const colour = `${this.hue}, 100%, ${this.lightness}%`;
-    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
-    g.addColorStop(0, `hsla(${colour}, ${this.alpha})`);
-    g.addColorStop(1, `hsla(${colour}, 0)`);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-};
-__name(_Flame, "Flame");
-__publicField(_Flame, "BUOYANCY", 0.06);
-// upward px/step^2
-__publicField(_Flame, "FRICTION", 0.9);
-var Flame = _Flame;
-var _Glow = class _Glow {
-  /**
-   * @param {number} x
-   * @param {number} y
-   * @param {number} radius px when fully swollen
-   */
-  constructor(x, y, radius) {
-    this.x = x;
-    this.y = y;
-    this.maxRadius = radius;
-    this.age = 0;
-    this.dead = false;
-    this.layer = "trail";
-  }
-  get t() {
-    return Math.min(1, this.age / _Glow.LIFE);
-  }
-  /** @returns {boolean} never pops */
-  update() {
-    this.age++;
-    if (this.age >= _Glow.LIFE) this.dead = true;
-    return false;
-  }
-  /** @param {CanvasRenderingContext2D} ctx */
-  draw(ctx) {
-    const t = this.t;
-    const r = this.maxRadius * (1 - (1 - t) ** 3) + 1;
-    const a = 0.55 * (1 - t);
-    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
-    g.addColorStop(0, `hsla(50, 100%, 90%, ${a})`);
-    g.addColorStop(0.4, `hsla(30, 100%, 60%, ${a * 0.6})`);
-    g.addColorStop(1, "hsla(15, 100%, 50%, 0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-};
-__name(_Glow, "Glow");
-__publicField(_Glow, "LIFE", 28);
-var Glow = _Glow;
-var _Smoke = class _Smoke {
-  /** @param {SmokeInit} init */
-  constructor({ x, y, delay, life, drift, rise, radius }) {
-    this.x = x;
-    this.y = y;
-    this.delay = delay;
-    this.life = life;
-    this.vx = drift;
-    this.vy = -rise;
-    this.radius0 = radius;
-    this.age = -delay;
-    this.dead = false;
-    this.layer = "sprite";
-  }
-  /** @returns {boolean} never pops */
-  update() {
-    this.age++;
-    if (this.age > 0) {
-      this.vx *= 0.98;
-      this.x += this.vx;
-      this.y += this.vy;
-    }
-    if (this.age >= this.life) this.dead = true;
-    return false;
-  }
-  get alpha() {
-    if (this.age <= 0) return 0;
-    return _Smoke.MAX_ALPHA * Math.min(1, this.age / 12) * (1 - this.age / this.life);
-  }
-  /** @param {CanvasRenderingContext2D} ctx */
-  draw(ctx) {
-    const a = this.alpha;
-    if (a <= 0) return;
-    const r = this.radius0 * (1 + 1.5 * this.age / this.life);
-    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
-    g.addColorStop(0, `hsla(20, 6%, 38%, ${a})`);
-    g.addColorStop(1, "hsla(20, 6%, 38%, 0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-};
-__name(_Smoke, "Smoke");
-__publicField(_Smoke, "MAX_ALPHA", 0.35);
-var Smoke = _Smoke;
-
-// src/bursts.js
-function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
-  return new Particle({
-    x,
-    y,
-    angle: r.range(0, Math.PI * 2),
-    speed: r.int(1, 10),
-    hue,
-    brightness: inRange(r, o.brightness, true),
-    decay: inRange(r, o.decay),
-    friction: o.friction,
-    gravity: o.gravity,
-    trail: o.explosion,
-    lineWidth: inRange(r, o.lineWidth.explosion),
-    flicker: r.int(0, 100) <= o.flickering,
-    ...overrides
-  });
-}
-__name(particle, "particle");
-var bursts = {
-  peony: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c)), "peony"),
-  // Evenly spaced angles and one shared speed: friction and gravity act the same
-  // on every particle, so the ring stays a circle as it drifts and fades.
-  ring: /* @__PURE__ */ __name((c) => {
-    const speed = c.random.range(6, 9);
-    const decay = inRange(c.random, c.options.decay);
-    const offset = c.random.range(0, Math.PI * 2);
-    return Array.from(
-      { length: c.count },
-      (_, i) => particle(c, { angle: offset + i / c.count * Math.PI * 2, speed, decay })
-    );
-  }, "ring"),
-  // Long-lived gold strands that droop further than a peony.
-  willow: /* @__PURE__ */ __name((c) => Array.from(
-    { length: c.count },
-    () => particle(c, {
-      hue: c.random.range(35, 48),
-      speed: c.random.range(2, 8),
-      decay: inRange(c.random, c.options.decay) * 0.4,
-      friction: Math.max(c.options.friction, 0.96),
-      gravity: c.options.gravity * 0.5,
-      trail: c.options.explosion * 3,
-      brightness: c.random.range(55, 70),
-      flicker: false
-    })
-  ), "willow"),
-  // Flickers, then each particle pops into a few tiny sparks near the end.
-  crackle: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })), "crackle"),
-  // A ball of fire: a glow, rising flames that cool from yellow to red, gold
-  // embers, then smoke as the flames die. Its own colours; the hue is unused.
-  fireball: /* @__PURE__ */ __name((c) => {
-    const r = c.random;
-    const smoke = Math.floor(c.count * 0.15);
-    const embers = Math.floor(c.count * 0.25);
-    const flames = Math.max(1, c.count - smoke - embers - 1);
-    return [
-      new Glow(c.x, c.y, 120),
-      ...Array.from(
-        { length: flames },
-        () => new Flame({
-          x: c.x + r.range(-10, 10),
-          y: c.y + r.range(-10, 10),
-          angle: r.range(0, Math.PI * 2),
-          speed: r.range(1, 7),
-          radius: r.range(14, 28),
-          life: r.int(45, 80)
-        })
-      ),
-      ...Array.from(
-        { length: embers },
-        () => particle(c, {
-          hue: r.range(25, 45),
-          speed: r.range(2, 9),
-          brightness: r.range(60, 75),
-          decay: r.range(0.02, 0.04),
-          gravity: c.options.gravity * 0.6,
-          flicker: true
-        })
-      ),
-      ...Array.from(
-        { length: smoke },
-        () => new Smoke({
-          x: c.x + r.range(-35, 35),
-          y: c.y + r.range(-30, 5),
-          delay: r.int(25, 45),
-          life: r.int(60, 90),
-          drift: r.range(-0.6, 0.6),
-          rise: r.range(0.4, 0.9),
-          radius: r.range(16, 26)
-        })
-      )
-    ];
-  }, "fireball")
-};
-function crackleSparks(parent, r, max) {
-  return Array.from(
-    { length: Math.max(0, Math.min(max, r.int(3, 5))) },
-    () => new Particle({
-      x: parent.x,
-      y: parent.y,
-      angle: r.range(0, Math.PI * 2),
-      speed: r.range(1, 3),
-      hue: parent.hue,
-      brightness: 85,
-      decay: r.range(0.06, 0.1),
-      friction: 0.9,
-      gravity: parent.gravity * 0.5,
-      trail: 2,
-      lineWidth: 1,
-      flicker: true
-    })
-  );
-}
-__name(crackleSparks, "crackleSparks");
-
 // src/sprite.js
 function parsePixels(frames2, palette3) {
   if (frames2.length === 0) throw new Error("xploders: a sprite needs at least one frame");
@@ -508,6 +247,283 @@ var _Sprite = class _Sprite {
 __name(_Sprite, "Sprite");
 var Sprite = _Sprite;
 
+// src/fireball.js
+var DOT = 64;
+var dots = /* @__PURE__ */ new Map();
+function softDot(key, stops) {
+  let dot = dots.get(key);
+  if (!dot) {
+    dot = createCanvas(DOT, DOT);
+    const c = dot.getContext("2d");
+    const g = c.createRadialGradient(DOT / 2, DOT / 2, 0, DOT / 2, DOT / 2, DOT / 2);
+    for (const [at, colour] of stops) g.addColorStop(at, colour);
+    c.fillStyle = g;
+    c.fillRect(0, 0, DOT, DOT);
+    dots.set(key, dot);
+  }
+  return dot;
+}
+__name(softDot, "softDot");
+function drawDot(ctx, dot, x, y, r, alpha) {
+  if (!(alpha > 0) || !(r > 0)) return;
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.drawImage(dot, x - r, y - r, r * 2, r * 2);
+  ctx.globalAlpha = 1;
+}
+__name(drawDot, "drawDot");
+var FLAME_STEPS = 24;
+var _Flame = class _Flame {
+  /** @param {FlameInit} init */
+  constructor({ x, y, angle, speed, radius, life }) {
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.radius0 = radius;
+    this.life = life;
+    this.age = 0;
+    this.dead = false;
+    this.layer = "trail";
+  }
+  /** @returns {number} 0 at birth, 1 at death */
+  get t() {
+    return Math.min(1, this.age / this.life);
+  }
+  get hue() {
+    return 55 * (1 - this.t);
+  }
+  get lightness() {
+    return 92 - 50 * this.t;
+  }
+  get radius() {
+    return this.radius0 * (0.6 + 0.9 * this.t);
+  }
+  get alpha() {
+    return (1 - this.t) ** 1.5;
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.vx *= _Flame.FRICTION;
+    this.vy = this.vy * _Flame.FRICTION - _Flame.BUOYANCY;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.age++;
+    if (this.age >= this.life) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const step = Math.min(FLAME_STEPS - 1, Math.floor(this.t * FLAME_STEPS));
+    const t = step / (FLAME_STEPS - 1);
+    const colour = `${Math.round(55 * (1 - t))}, 100%, ${Math.round(92 - 50 * t)}%`;
+    const dot = softDot(`flame${step}`, [
+      [0, `hsla(${colour}, 1)`],
+      [1, `hsla(${colour}, 0)`]
+    ]);
+    drawDot(ctx, dot, this.x, this.y, this.radius, this.alpha);
+  }
+};
+__name(_Flame, "Flame");
+__publicField(_Flame, "BUOYANCY", 0.06);
+// upward px/step^2
+__publicField(_Flame, "FRICTION", 0.9);
+var Flame = _Flame;
+var _Glow = class _Glow {
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} radius px when fully swollen
+   */
+  constructor(x, y, radius) {
+    this.x = x;
+    this.y = y;
+    this.maxRadius = radius;
+    this.age = 0;
+    this.dead = false;
+    this.layer = "trail";
+  }
+  get t() {
+    return Math.min(1, this.age / _Glow.LIFE);
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.age++;
+    if (this.age >= _Glow.LIFE) this.dead = true;
+    return false;
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const t = this.t;
+    const dot = softDot("glow", [
+      [0, "hsla(50, 100%, 90%, 1)"],
+      [0.4, "hsla(30, 100%, 60%, 0.6)"],
+      [1, "hsla(15, 100%, 50%, 0)"]
+    ]);
+    drawDot(ctx, dot, this.x, this.y, this.maxRadius * (1 - (1 - t) ** 3) + 1, 0.55 * (1 - t));
+  }
+};
+__name(_Glow, "Glow");
+__publicField(_Glow, "LIFE", 28);
+var Glow = _Glow;
+var _Smoke = class _Smoke {
+  /** @param {SmokeInit} init */
+  constructor({ x, y, delay, life, drift, rise, radius }) {
+    this.x = x;
+    this.y = y;
+    this.delay = delay;
+    this.life = life;
+    this.vx = drift;
+    this.vy = -rise;
+    this.radius0 = radius;
+    this.age = -delay;
+    this.dead = false;
+    this.layer = "sprite";
+    this.behind = true;
+  }
+  /** @returns {boolean} never pops */
+  update() {
+    this.age++;
+    if (this.age > 0) {
+      this.vx *= 0.98;
+      this.x += this.vx;
+      this.y += this.vy;
+    }
+    if (this.age >= this.life) this.dead = true;
+    return false;
+  }
+  get alpha() {
+    if (this.age <= 0) return 0;
+    return _Smoke.MAX_ALPHA * Math.min(1, this.age / 12) * (1 - this.age / this.life);
+  }
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const dot = softDot("smoke", [
+      [0, "hsla(20, 6%, 38%, 1)"],
+      [1, "hsla(20, 6%, 38%, 0)"]
+    ]);
+    drawDot(ctx, dot, this.x, this.y, this.radius0 * (1 + 1.5 * this.age / this.life), this.alpha);
+  }
+};
+__name(_Smoke, "Smoke");
+__publicField(_Smoke, "MAX_ALPHA", 0.35);
+var Smoke = _Smoke;
+
+// src/bursts.js
+function particle({ x, y, hue, options: o, random: r }, overrides = {}) {
+  return new Particle({
+    x,
+    y,
+    angle: r.range(0, Math.PI * 2),
+    speed: r.int(1, 10),
+    hue,
+    brightness: inRange(r, o.brightness, true),
+    decay: inRange(r, o.decay),
+    friction: o.friction,
+    gravity: o.gravity,
+    trail: o.explosion,
+    lineWidth: inRange(r, o.lineWidth.explosion),
+    flicker: r.int(0, 100) <= o.flickering,
+    ...overrides
+  });
+}
+__name(particle, "particle");
+var bursts = {
+  peony: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c)), "peony"),
+  // Evenly spaced angles and one shared speed: friction and gravity act the same
+  // on every particle, so the ring stays a circle as it drifts and fades.
+  ring: /* @__PURE__ */ __name((c) => {
+    const speed = c.random.range(6, 9);
+    const decay = inRange(c.random, c.options.decay);
+    const offset = c.random.range(0, Math.PI * 2);
+    return Array.from(
+      { length: c.count },
+      (_, i) => particle(c, { angle: offset + i / c.count * Math.PI * 2, speed, decay })
+    );
+  }, "ring"),
+  // Long-lived gold strands that droop further than a peony.
+  willow: /* @__PURE__ */ __name((c) => Array.from(
+    { length: c.count },
+    () => particle(c, {
+      hue: c.random.range(35, 48),
+      speed: c.random.range(2, 8),
+      decay: inRange(c.random, c.options.decay) * 0.4,
+      friction: Math.max(c.options.friction, 0.96),
+      gravity: c.options.gravity * 0.5,
+      trail: c.options.explosion * 3,
+      brightness: c.random.range(55, 70),
+      flicker: false
+    })
+  ), "willow"),
+  // Flickers, then each particle pops into a few tiny sparks near the end.
+  crackle: /* @__PURE__ */ __name((c) => Array.from({ length: c.count }, () => particle(c, { flicker: true, crackleAt: c.random.range(0.2, 0.4) })), "crackle"),
+  // A ball of fire: a glow, rising flames that cool from yellow to red, gold
+  // embers, then smoke as the flames die. Its own colours; the hue is unused.
+  // Under reduced motion there is no flash of light.
+  fireball: /* @__PURE__ */ __name((c) => {
+    const r = c.random;
+    const smoke = Math.floor(c.count * 0.15);
+    const embers = Math.floor(c.count * 0.25);
+    const flames = Math.max(1, c.count - smoke - embers - (c.calm ? 0 : 1));
+    return [
+      ...c.calm ? [] : [new Glow(c.x, c.y, 120)],
+      ...Array.from(
+        { length: flames },
+        () => new Flame({
+          x: c.x + r.range(-10, 10),
+          y: c.y + r.range(-10, 10),
+          angle: r.range(0, Math.PI * 2),
+          speed: r.range(1, 7),
+          radius: r.range(14, 28),
+          life: r.int(45, 80)
+        })
+      ),
+      ...Array.from(
+        { length: embers },
+        () => particle(c, {
+          hue: r.range(25, 45),
+          speed: r.range(2, 9),
+          brightness: r.range(60, 75),
+          decay: r.range(0.02, 0.04),
+          gravity: c.options.gravity * 0.6,
+          flicker: true
+        })
+      ),
+      ...Array.from(
+        { length: smoke },
+        () => new Smoke({
+          x: c.x + r.range(-35, 35),
+          y: c.y + r.range(-30, 5),
+          delay: r.int(25, 45),
+          life: r.int(60, 90),
+          drift: r.range(-0.6, 0.6),
+          rise: r.range(0.4, 0.9),
+          radius: r.range(16, 26)
+        })
+      )
+    ];
+  }, "fireball")
+};
+function crackleSparks(parent, r, max) {
+  return Array.from(
+    { length: Math.max(0, Math.min(max, r.int(3, 5))) },
+    () => new Particle({
+      x: parent.x,
+      y: parent.y,
+      angle: r.range(0, Math.PI * 2),
+      speed: r.range(1, 3),
+      hue: parent.hue,
+      brightness: 85,
+      decay: r.range(0.06, 0.1),
+      friction: 0.9,
+      gravity: parent.gravity * 0.5,
+      trail: 2,
+      lineWidth: 1,
+      flicker: true
+    })
+  );
+}
+__name(crackleSparks, "crackleSparks");
+
 // src/engine.js
 var STEP_MS = 1e3 / 60;
 var MAX_FRAME_MS = 250;
@@ -519,6 +535,8 @@ var _Engine = class _Engine {
    * @param {Partial<Env>} [env] injectable for tests
    */
   constructor(canvas, options, random, env = {}) {
+    /** @type {string | undefined} the unknown mouse.projectile already warned about */
+    __publicField(this, "warnedProjectile");
     /** @type {ProjectileClass | undefined} set by Xploders */
     __publicField(this, "defaultProjectile");
     this.canvas = canvas;
@@ -605,15 +623,18 @@ var _Engine = class _Engine {
     if (!this.running) return;
     this.accumulator += Math.min(Math.max(0, now - this.lastTime), MAX_FRAME_MS);
     this.lastTime = now;
-    while (this.accumulator >= STEP_MS) {
-      this.step();
-      this.accumulator -= STEP_MS;
-      this.pendingSteps++;
+    try {
+      while (this.accumulator >= STEP_MS) {
+        this.step();
+        this.accumulator -= STEP_MS;
+        this.pendingSteps++;
+      }
+      if (this.pendingSteps > 0) this.draw(this.pendingSteps);
+    } catch (error) {
+      console.error("xploders: a frame failed", error);
+      this.accumulator = 0;
     }
-    if (this.pendingSteps > 0) {
-      this.draw(this.pendingSteps);
-      this.pendingSteps = 0;
-    }
+    this.pendingSteps = 0;
     if (this.running) this.frameId = this.raf(this.tick);
     if (this.empty && this.onEmpty) this.onEmpty();
   }
@@ -621,7 +642,12 @@ var _Engine = class _Engine {
   step() {
     const o = this.options;
     if (this.pointer?.active && o.mouse.click && this.projectiles.length < o.mouse.max) {
-      this.launch(1, this.resolve(o.mouse.projectile));
+      const Cls = this.resolve(o.mouse.projectile);
+      if (Cls) this.launch(1, Cls);
+      else if (this.warnedProjectile !== o.mouse.projectile) {
+        this.warnedProjectile = o.mouse.projectile;
+        console.warn(`xploders: mouse.projectile "${o.mouse.projectile}" is not a registered type; nothing launched`);
+      }
     }
     if (this.autoLaunch && !this.calm && o.intensity > 0) {
       this.launchClock += STEP_MS * o.intensity * Math.PI / 1e3;
@@ -650,15 +676,24 @@ var _Engine = class _Engine {
     const particles = this.particles;
     this.particles = [];
     let live = particles.length;
+    let failed = 0;
+    let firstError;
     for (const p of particles) {
-      if (p.update() && p instanceof Particle) {
-        const sparks = crackleSparks(p, this.random, Math.floor(this.options.maxParticles) - live + 1);
-        this.particles.push(...sparks);
-        live += sparks.length;
+      try {
+        if (p.update() && p instanceof Particle) {
+          const sparks = crackleSparks(p, this.random, Math.floor(this.options.maxParticles) - live + 1);
+          this.particles.push(...sparks);
+          live += sparks.length;
+        }
+      } catch (error) {
+        if (!failed++) firstError = error;
+        live--;
+        continue;
       }
       if (p.dead) live--;
       else this.particles.push(p);
     }
+    if (failed) console.error(`xploders: removed ${failed} particle(s) that threw`, firstError);
   }
   /** @returns {number} how many more particles fit under maxParticles */
   capacity() {
@@ -676,7 +711,7 @@ var _Engine = class _Engine {
     const o = this.options;
     const r = this.random;
     const b = o.boundaries;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < count && this.projectiles.length < o.maxProjectiles; i++) {
       const x = this.width * inRange(r, o.rocketsPoint, true) / 100;
       const target = this.pointer?.target() ?? {
         x: r.int(Math.min(b.x, b.width - b.x * 2), Math.max(b.x, b.width - b.x * 2)),
@@ -695,12 +730,13 @@ var _Engine = class _Engine {
    * @param {import('./options.js').BurstStyle} [style] defaults to the `burst` option
    */
   burst(x, y, hue, style) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     const o = this.options;
     const choice = style ?? (Array.isArray(o.burst) ? this.random.pick(o.burst) : o.burst);
     const make = bursts[choice] ?? bursts.peony;
     const count = Math.min(Math.floor(o.particles), this.capacity());
     if (count <= 0) return;
-    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random }).slice(0, this.capacity()));
+    this.particles.push(...make({ x, y, hue, count, options: o, random: this.random, calm: this.calm }).slice(0, this.capacity()));
   }
   /**
    * Adds particles of any kind (feathers...), as many as fit under `maxParticles`.
@@ -712,7 +748,7 @@ var _Engine = class _Engine {
   /** @param {number} steps physics steps since the last draw */
   draw(steps) {
     const { ctx, trailCtx: tc, width, height, options: o } = this;
-    if (width <= 0 || height <= 0) return;
+    if (width <= 0 || height <= 0 || this.canvas.width === 0 || this.canvas.height === 0) return;
     const fade = 1 - (1 - o.opacity) ** steps;
     tc.globalCompositeOperation = "destination-out";
     tc.fillStyle = `rgba(0, 0, 0, ${fade})`;
@@ -740,6 +776,8 @@ var _Engine = class _Engine {
    * @param {'trail' | 'sprite'} layer
    */
   drawLayer(ctx, layer) {
+    const mine = this.particles.filter((p) => (p.layer ?? "trail") === layer);
+    let failed = this.drawParticles(ctx, mine.filter((p) => p.behind));
     for (const p of this.projectiles) {
       if (p.layer !== layer) continue;
       try {
@@ -749,7 +787,26 @@ var _Engine = class _Engine {
         this.projectiles = this.projectiles.filter((q) => q !== p);
       }
     }
-    for (const p of this.particles) if ((p.layer ?? "trail") === layer) p.draw(ctx, this.flickerRandom);
+    failed += this.drawParticles(ctx, mine.filter((p) => !p.behind));
+    if (failed) this.particles = this.particles.filter((p) => !p.dead);
+  }
+  /**
+   * Draws particles; one that throws is marked dead and the first error logged.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {ParticleLike[]} list
+   * @returns {number} how many failed
+   */
+  drawParticles(ctx, list) {
+    let failed = 0;
+    for (const p of list) {
+      try {
+        p.draw(ctx, this.flickerRandom);
+      } catch (error) {
+        if (!failed++) console.error("xploders: removed a particle that threw while drawing", error);
+        p.dead = true;
+      }
+    }
+    return failed;
   }
 };
 __name(_Engine, "Engine");
@@ -779,16 +836,18 @@ function defaultOptions() {
     autoresize: true,
     burst: "peony",
     maxParticles: 4e3,
+    maxProjectiles: 100,
     mouse: { click: false, move: false, max: 1, projectile: "rocket" },
     reducedMotion: "auto"
   };
 }
 __name(defaultOptions, "defaultOptions");
+var UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
 var isPlainObject = /* @__PURE__ */ __name((v) => typeof v === "object" && v !== null && !Array.isArray(v), "isPlainObject");
 function deepMerge(target, source) {
   const t = target;
   for (const [key, value] of Object.entries(source)) {
-    if (value === void 0) continue;
+    if (value === void 0 || UNSAFE_KEYS.has(key)) continue;
     if (isPlainObject(value) && isPlainObject(t[key])) deepMerge(t[key], value);
     else t[key] = Array.isArray(value) ? [...value] : value;
   }
@@ -1737,11 +1796,17 @@ var _Xploders = class _Xploders {
     return this;
   }
   /**
-   * Resizes the canvas, by default to the container's size.
+   * Resizes the drawing, by default to the canvas's own size on the page.
    * @param {{width?: number, height?: number}} [size] CSS pixels
    */
-  updateSize({ width = this.container.clientWidth, height = this.container.clientHeight } = {}) {
+  updateSize(size = {}) {
+    const measured = size.width === void 0 && size.height === void 0;
+    const { width = this.canvas.clientWidth, height = this.canvas.clientHeight } = size;
     this.engine.resize(width, height);
+    if (measured) {
+      if (this.canvas.clientWidth !== width) this.canvas.style.width = `${width}px`;
+      if (this.canvas.clientHeight !== height) this.canvas.style.height = `${height}px`;
+    }
     return this;
   }
   /** @param {Partial<import('./options.js').Boundaries>} boundaries */
