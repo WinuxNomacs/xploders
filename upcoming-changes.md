@@ -3,7 +3,7 @@
 ## Phases (current and upcoming)
 
 - **Up next:** 1. Demo boundaries editor (details below)
-- **Then:** 2. Saturn and Shapes bursts; 3. Animals burst
+- **Then:** 2. Saturn and Shapes bursts; 3. Animals burst; 4. Performance review (after the planned updates)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
@@ -260,6 +260,22 @@ per burst; in the Burst menu.
 
 Open decisions (to ask when planning): which animals (for example elephant, giraffe, lion, monkey, penguin), and
 whether an outline faces a random way.
+
+## 4. Performance review
+
+Request (`new.md`, 2026-11-24): "Once the current planned updates are complete. Plan a performance review to improve
+rendering performance and reduce unnecessary cpu/gpu impact."
+
+Builds on: the measurements so far (in Done): step + draw per particle count, the trail-layer copy, fireball draw
+cost (large additive soft dots are fill-rate bound: 10 jug fireballs about 76 ms per frame in headless Chromium at
+DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src/engine.js`).
+
+Proposed, to plan once phases 1-3 are done: profile the demo in a real GPU-backed browser as well as headless
+(headless uses software rendering, so its numbers are pessimistic); measure where frame time goes (trail fade,
+additive flames, sprite draws, particle updates); candidates to weigh: idling the loop when the sky is empty and
+auto-launch is off, a lower-resolution trail layer at high DPR, capping fireball fill (fewer, cached bigger dots),
+pausing when the tab or canvas is hidden (`document.hidden`, `IntersectionObserver`), and batching draws by style.
+Each change measured before and after, on the same machine in the same session.
 
 ## Fixes from the code review of 2026-11-24 (done)
 
