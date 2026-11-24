@@ -2,7 +2,8 @@
 
 ## Phases (current and upcoming)
 
-- **Up next:** nothing planned yet
+- **Up next:** 1. Demo: calmer default and click to fire (details below)
+- **Then:** 2. The exploding cow (details below)
 - **Later:** projectile extras (spin, fuse) and new launchable objects, shaped when the next object is known
 
 ## Done
@@ -62,6 +63,63 @@
 - **Setup** (2026-11-23, branch `setup/scaffold`): package, esbuild build (ESM + IIFE + `.d.ts`), dev server, demo
   page, ESLint, Vitest (`test/*.test.js`), Playwright (`test/browser/`), engine skeleton in `src/` (fixed-step loop,
   DPR canvas, `Projectile` base, placeholder `Rocket`/`Chicken`, single burst style, seedable `Random`).
+
+## 1. Demo: calmer default and click to fire
+
+Requests (`new.md`, 2026-11-24): "reduce default intensity by half"; "enable click to fire at target the last type
+the user selected, default fireworks". Builds on the demo page (`demo/index.html`, `demo/main.js`) and
+`launchAt` (`src/index.js`), which already aims rockets, chickens and jugs at a point.
+
+### Decisions (user, 2026-11-24)
+
+- **Intensity: demo page only.** The demo's Intensity slider starts at 15 (was 30). The library default stays 30,
+  matching fireworks-js.
+- **Click to fire: one launch per click or tap, always on.** A click on the sky launches one of the last selected
+  type at that point: Fireworks, Chicken (with the Chicken flight choice), Jug-o-BOOM, and Cow once phase 2 lands;
+  fireworks until a button is pressed. Pressing a launch button both launches as today and selects its type. Never
+  blocked by auto rockets in flight (it calls `launchAt` directly; `mouse.max` is not involved).
+- **The "Pointer: on/off" button goes**, and with it drag-aiming of auto rockets in the demo. The library's `mouse`
+  options are unchanged.
+
+### Behaviour
+
+- Built in the demo, not the library: a `pointerdown` listener on the sky canvas maps the CSS position
+  (`getBoundingClientRect`) and calls `show.launchAt(x, y, type, init)`. Clicks on the controls don't reach the
+  canvas. The selected button shows as pressed (`aria-pressed`), so it is clear what a click fires.
+- The How-to panel and README's demo description say how clicking works.
+- A tap on a phone fires; the canvas doesn't need `touch-action: none` for a single tap (no drag). Checked on the
+  phone viewport test.
+
+### Tests
+
+- Browser: the slider starts at 15; a click with nothing selected launches a rocket at the click; after pressing
+  Chicken (and Jug-o-BOOM), a click launches that type at the click point; a click while 10+ auto rockets fly still
+  launches; clicks on the controls launch nothing; no Pointer button.
+
+## 2. The exploding cow
+
+Request (`new.md`, 2026-11-24): "add exploding cows that appear to Moo! excitedly just before they explode into
+fireworks, steaks and milk splatters". Builds on the projectile API (`src/projectile.js`, `moveTo`), pixel sprites
+(`src/sprite.js`, text grids like `src/art/jug.js` and its 3x5 font), shards (`src/shard.js`) as the model for
+steaks, and the demo's launch buttons and click to fire from phase 1.
+
+### Decisions (user, 2026-11-24)
+
+- **Flight: floats up and hovers.** Rises from below the bottom edge, legs kicking, slows and hovers at its
+  target, then Moo!s and explodes.
+- **The Moo!: speech bubble and shake.** A pixel speech bubble saying "MOO!" pops up beside the cow while it bounces
+  and shakes, eyes wide, for about half a second; then it explodes.
+
+### Proposed (to confirm when planning the phase)
+
+- Original pixel art (`src/art/cow.js`): a black-and-white cow, frames for kicking legs and an excited, open-mouthed
+  frame; the bubble as its own sprite with "MOO!" from the 3x5 font (adds "!").
+- `src/projectiles/cow.js`: `Cow` with `defaults` (scale, hover time, Moo! time, steaks, burst), registered as
+  `'cow'`; a Cow button in the demo.
+- Explosion: the show's burst (a firework in the launch hue), steaks (tumbling sprite pieces like shards, on the
+  sprite layer) and milk splatters (white droplets that fly out, fall and fade; drawn on the sprite layer so they
+  stay white rather than adding up to glare). Under reduced motion: no shake, the bubble still shows.
+- Counts toward `maxParticles` like shards and feathers.
 
 ## Fixes from the code review of 2026-11-24 (done)
 
