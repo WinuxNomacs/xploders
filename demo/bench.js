@@ -2,8 +2,10 @@
 // how long the show's work takes per frame and how often frames arrive.
 import { Xploders } from '../src/index.js'
 
-// `?quick` runs each scene briefly, for the browser tests.
-const quick = new URLSearchParams(location.search).has('quick')
+// `?quick` runs each scene briefly, for the browser tests; `?scene=4` runs only the fourth.
+const params = new URLSearchParams(location.search)
+const quick = params.has('quick')
+const only = Number(params.get('scene')) || 0
 const WARMUP_STEPS = quick ? 5 : 60
 const MEASURE_STEPS = quick ? 20 : 300 // 5 s at 60 steps a second
 
@@ -16,7 +18,7 @@ const scenes = [
   { name: 'Idle sky (nothing launching)', options: { intensity: 0 } },
   { name: 'Fireworks show (intensity 80, mixed bursts)', options: { intensity: 80, burst: ['peony', 'ring', 'willow', 'crackle'] } },
   {
-    name: 'Near the particle cap (4000)',
+    name: 'Many sparks (about 2500)',
     options: { intensity: 0, particles: 120 },
     every: (show, step) => step % 20 === 0 && show.launch(8),
   },
@@ -131,6 +133,7 @@ runButton.addEventListener('click', async () => {
     'work ms/frame: avg, p95 | frames/s | frames slower than 20 ms | most particles | scene',
   ]
   for (const [i, scene] of scenes.entries()) {
+    if (only && i + 1 !== only) continue
     status.textContent = `Running ${i + 1} of ${scenes.length}: ${scene.name}`
     const r = /** @type {any} */ (await runScene(scene))
     lines.push(`${fmt(r.work, 2)} ${fmt(r.work95, 2)} | ${fmt(r.fps)} | ${String(r.slow).padStart(4)} of ${r.frames} | ${String(r.particles).padStart(5)} | ${r.name}`)

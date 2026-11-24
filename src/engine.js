@@ -6,6 +6,8 @@ import { createCanvas } from './sprite.js'
 /** One physics step, ms. Option units are per step, as fireworks-js's are per 60 fps frame. */
 export const STEP_MS = 1000 / 60
 const MAX_FRAME_MS = 250 // a longer gap (tab in background) is clamped, not replayed
+/** Undrawn steps counted at most; far past any trail's fade, so the count stays small however long it idles. */
+const MAX_PENDING_STEPS = 10000
 
 /**
  * What the engine needs from the browser; tests pass stand-ins.
@@ -83,7 +85,14 @@ export class Engine {
     this.launchAt = 0
     this.accumulator = 0
     this.lastTime = 0
+    /** steps not drawn yet: since the last draw, including frames skipped as unseen */
     this.pendingSteps = 0
+    /** false while the canvas is out of view (set by Xploders); the show still steps, but isn't drawn */
+    this.visible = true
+    /** steps since the sky became empty */
+    this.idleSteps = 0
+    /** whether the last frame drawn showed the boundaries outline */
+    this.drewDebug = false
     /** @type {number | null} */
     this.frameId = null
     /** @type {(() => void) | null} called after a step that leaves the sky empty */
@@ -146,17 +155,40 @@ export class Engine {
       while (this.accumulator >= STEP_MS) {
         this.step()
         this.accumulator -= STEP_MS
-        this.pendingSteps++
+        this.pendingSteps = Math.min(this.pendingSteps + 1, MAX_PENDING_STEPS)
+        this.idleSteps = this.empty ? this.idleSteps + 1 : 0
       }
-      if (this.pendingSteps > 0) this.draw(this.pendingSteps)
+      if (this.pendingSteps > 0 && this.shouldDraw()) {
+        this.draw(this.pendingSteps)
+        this.pendingSteps = 0
+      }
     } catch (error) {
       // Pieces that fail are removed where they fail; this is the last guard, so the loop never dies.
       console.error('xploders: a frame failed', error)
       this.accumulator = 0
+      this.pendingSteps = 0
     }
-    this.pendingSteps = 0
     if (this.running) this.frameId = this.raf(this.tick)
     if (this.empty && this.onEmpty) this.onEmpty()
+  }
+
+  /**
+   * Whether a frame would show anything new: not while the canvas is out of view,
+   * nor once the sky has been empty long enough for its trails to fade out (unless
+   * the boundaries outline is, or was last, showing). Skipped steps are drawn later,
+   * so the trails fade by the same amount either way.
+   */
+  shouldDraw() {
+    if (!this.visible) return false
+    if (this.options.boundaries.debug || this.drewDebug) return true
+    return !(this.empty && this.idleSteps > this.fadeSteps())
+  }
+
+  /** Steps for a trail to fade below one 8-bit level at the `opacity` option's rate. */
+  fadeSteps() {
+    const o = this.options.opacity
+    if (!(o > 0) || o >= 1) return 1 // nothing fades, or it all goes in one step
+    return Math.ceil(Math.log(1 / 256) / Math.log(1 - o)) + 1
   }
 
   /** One fixed 1/60 s step of the whole show. */
@@ -320,6 +352,7 @@ export class Engine {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
     ctx.drawImage(this.trail, 0, 0)
     ctx.restore()
+    this.drewDebug = o.boundaries.debug
     if (o.boundaries.debug) {
       const a = this.targetArea()
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
@@ -337,8 +370,13 @@ export class Engine {
    * @param {'trail' | 'sprite'} layer
    */
   drawLayer(ctx, layer) {
-    const mine = this.particles.filter((p) => (p.layer ?? 'trail') === layer)
-    let failed = this.drawParticles(ctx, mine.filter((p) => p.behind))
+    // one pass over the particles: those drawn behind the projectiles, and the rest
+    /** @type {ParticleLike[]} */
+    const behind = []
+    /** @type {ParticleLike[]} */
+    const front = []
+    for (const p of this.particles) if ((p.layer ?? 'trail') === layer) (p.behind ? behind : front).push(p)
+    let failed = this.drawParticles(ctx, behind)
     for (const p of this.projectiles) {
       if (p.layer !== layer) continue
       try {
@@ -348,7 +386,7 @@ export class Engine {
         this.projectiles = this.projectiles.filter((q) => q !== p)
       }
     }
-    failed += this.drawParticles(ctx, mine.filter((p) => !p.behind))
+    failed += this.drawParticles(ctx, front)
     if (failed) this.particles = this.particles.filter((p) => !p.dead)
   }
 

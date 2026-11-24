@@ -353,6 +353,23 @@ DPR 2, software rendering). The loop is fixed-step `requestAnimationFrame` (`src
    on the live site.
 3. Publish; the user runs "after".
 
+### Results so far (headless Chromium, 1280x800 at DPR 2, software rendering, 2026-11-24)
+
+Bench on `main` against this branch, two runs each, alternating, the machine otherwise idle (ms of work per frame):
+idle sky 1.87-1.90 on `main`, 0.01 on the branch; every busy scene the same within the runs' spread (fireworks show
+4.4-4.8, many sparks 14.3-15.0, jug fireballs 15.3-15.8 at about 36 frames/s, cows 2.0-2.2, Saturn/shapes/animals
+3.8-4.1, chickens 2.4).
+
+- Kept: skipping frames while out of view and once an empty sky has faded; one pass over the particles in
+  `drawLayer` (simpler; no measurable change).
+- Dropped: the cached spark colour with `globalAlpha` (no measurable change, so not worth the code).
+- Measured and dropped as a proposal: fireballs with half the flames at twice the area (no gain: the same area is
+  filled).
+- **Proposal for the user (changes the look):** draw the trail layer (sparks, flames, glows) at half resolution on
+  screens with devicePixelRatio 2 or more, sprites staying crisp. Stand-in measurement, the jug fireball scene at
+  DPR 1 against 2: 5.3-5.4 ms and 60 frames/s against 15.5-15.8 ms and 36 frames/s. Glows look the same; thin spark
+  trails come out slightly softer.
+
 ### Candidates (each measured, kept only if it looks the same)
 
 - Skip drawing while the canvas is out of view (`IntersectionObserver`), still stepping so time and `waitStop` hold.
