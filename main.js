@@ -51,6 +51,7 @@ el('burst').addEventListener('change', () => {
   const v = el('burst').value
   show.updateOptions({ burst: v === 'mix' ? ['peony', 'ring', 'willow', 'crackle', 'fireball', 'saturn', 'shapes', 'animals'] : /** @type {any} */ (v) })
 })
+el('theme').addEventListener('change', () => show.updateOptions({ theme: el('theme').value }))
 el('halfres').addEventListener('change', () => show.updateOptions({ trailResolution: el('halfres').checked ? 'half' : 'full' }))
 el('intensity').addEventListener('input', () => show.updateOptions({ intensity: Number(el('intensity').value) }))
 

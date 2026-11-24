@@ -106,7 +106,7 @@ function inRange(random, { min, max }, integer = false) {
 __name(inRange, "inRange");
 
 // src/sprite.js
-function parsePixels(frames2, palette4) {
+function parsePixels(frames2, palette5) {
   if (frames2.length === 0) throw new Error("xploders: a sprite needs at least one frame");
   const frameHeight = frames2[0].length;
   const frameWidth = frames2[0][0]?.length ?? 0;
@@ -114,7 +114,7 @@ function parsePixels(frames2, palette4) {
   const width = frameWidth * frames2.length;
   const data = new Uint8ClampedArray(width * frameHeight * 4);
   const colours = /* @__PURE__ */ new Map();
-  for (const [ch, css] of Object.entries(palette4)) colours.set(ch, css === null ? null : hexToRgb(css));
+  for (const [ch, css] of Object.entries(palette5)) colours.set(ch, css === null ? null : hexToRgb(css));
   frames2.forEach((rows, f) => {
     if (rows.length !== frameHeight) throw new Error(`xploders: frame ${f} has ${rows.length} rows, expected ${frameHeight}`);
     rows.forEach((row, y) => {
@@ -184,11 +184,11 @@ var _Sprite = class _Sprite {
    * @param {Record<string, string | null>} palette
    * @param {number} [fps]
    */
-  static fromPixels(frames2, palette4, fps = 8) {
-    const pixels = parsePixels(frames2, palette4);
-    const sprite2 = new _Sprite(null, { ...pixels, fps });
-    sprite2.pixels = pixels;
-    return sprite2;
+  static fromPixels(frames2, palette5, fps = 8) {
+    const pixels = parsePixels(frames2, palette5);
+    const sprite = new _Sprite(null, { ...pixels, fps });
+    sprite.pixels = pixels;
+    return sprite;
   }
   /** Makes the sheet (and its flash silhouette) from pixels, once. */
   build() {
@@ -1494,7 +1494,8 @@ function defaultOptions() {
     maxProjectiles: 100,
     mouse: { click: false, move: false, max: 1, projectile: "rocket" },
     reducedMotion: "auto",
-    trailResolution: "full"
+    trailResolution: "full",
+    theme: "64bit"
   };
 }
 __name(defaultOptions, "defaultOptions");
@@ -1511,10 +1512,20 @@ function deepMerge(target, source) {
 }
 __name(deepMerge, "deepMerge");
 
+// src/themes.js
+var DEFAULT_THEME = "64bit";
+var THEMES = ["64bit", "retro"];
+function pickTheme(themes, name) {
+  const art = name && themes[name] || themes[DEFAULT_THEME] || Object.values(themes)[0];
+  if (!art) throw new Error("xploders: a character has no art in any theme");
+  return art;
+}
+__name(pickTheme, "pickTheme");
+
 // src/projectile.js
 var _Projectile = class _Projectile {
   /** @param {ProjectileInit} init */
-  constructor({ x, y, target, size, hue, options, random, engine }) {
+  constructor({ x, y, target, size, hue, options, random, engine, theme }) {
     this.engine = engine;
     this.x = x;
     this.y = y;
@@ -1522,6 +1533,7 @@ var _Projectile = class _Projectile {
     this.size = size;
     this.layer = "trail";
     this.hue = hue;
+    this.theme = theme ?? options.theme ?? DEFAULT_THEME;
     this.options = options;
     this.random = random;
     this.age = 0;
@@ -1620,7 +1632,7 @@ __name(_Rocket, "Rocket");
 var Rocket = _Rocket;
 
 // src/feather.js
-var sprite = Sprite.fromPixels(
+var retroFeathers = Sprite.fromPixels(
   [
     ["...w", "..wg", ".wg.", "g..."],
     ["....", "wwww", ".ggg", "...."],
@@ -1630,7 +1642,7 @@ var sprite = Sprite.fromPixels(
 );
 var _Feather = class _Feather {
   /** @param {FeatherInit} init */
-  constructor({ x, y, scale, random: r }) {
+  constructor({ x, y, scale, random: r, sprite = retroFeathers, pixelSize = 1 }) {
     const angle = r.range(0, Math.PI * 2);
     const speed = r.range(2.5, 6);
     this.baseX = x;
@@ -1639,6 +1651,8 @@ var _Feather = class _Feather {
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed - 1.5;
     this.scale = scale;
+    this.sprite = sprite;
+    this.pixelSize = pixelSize;
     this.swayAmp = r.range(6, 12);
     this.swayFreq = r.range(0.05, 0.08);
     this.phase = r.range(0, Math.PI * 2);
@@ -1666,7 +1680,7 @@ var _Feather = class _Feather {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const alpha = Math.min(1, (this.life - this.age) / _Feather.FADE_STEPS);
-    sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha });
+    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.pixelSize, alpha });
   }
 };
 __name(_Feather, "Feather");
@@ -1818,6 +1832,294 @@ __name(compose, "compose");
 var flapFrames = [compose(body, wingUp), compose(body, wingMid), compose(body, wingDown), compose(body, wingMid)];
 var panicFrames = [compose(body, wingUp, panicFace, ruffle), compose(body, wingDown, panicFace)];
 
+// src/art/paint.js
+var LIGHT = (() => {
+  const v = [-0.5, -0.65, 0.6];
+  const n = Math.hypot(...v);
+  return v.map((c) => c / n);
+})();
+function shade(nx, ny, steps, bias = 0) {
+  const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+  const lit = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2] + bias;
+  const t = Math.min(1, Math.max(0, (lit + 0.25) / 1.15));
+  return Math.round((1 - t) * (steps - 1));
+}
+__name(shade, "shade");
+var _Grid = class _Grid {
+  /**
+   * @param {number} width
+   * @param {number} height
+   */
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.px = Array.from({ length: height }, () => Array(width).fill("."));
+  }
+  /** @param {number} x @param {number} y @param {string} ch */
+  set(x, y, ch) {
+    const ix = Math.round(x);
+    const iy = Math.round(y);
+    if (ix >= 0 && iy >= 0 && ix < this.width && iy < this.height) this.px[iy][ix] = ch;
+  }
+  /** @param {number} x @param {number} y */
+  get(x, y) {
+    return x >= 0 && y >= 0 && x < this.width && y < this.height ? this.px[y][x] : ".";
+  }
+  /**
+   * A filled ellipse shaded as a lit dome.
+   * @param {number} cx
+   * @param {number} cy
+   * @param {number} rx
+   * @param {number} ry
+   * @param {string} ramp palette characters, light to dark
+   * @param {{angle?: number, bias?: number, rim?: string, rimAt?: number, rimAll?: boolean, only?: (x: number, y: number) => boolean}} [opts]
+   *   angle: radians clockwise; bias: brighter or darker; rim: a character for the outer band (from `rimAt`, 0 to 1,
+   *   of the radius) on the side away from the light, or all round with `rimAll`; only: paint only where this is true
+   */
+  ellipse(cx, cy, rx, ry, ramp, { angle = 0, bias = 0, rim, rimAt = 0.82, rimAll = false, only } = {}) {
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    const reach = Math.max(rx, ry) + 1;
+    for (let y = Math.floor(cy - reach); y <= Math.ceil(cy + reach); y++) {
+      for (let x = Math.floor(cx - reach); x <= Math.ceil(cx + reach); x++) {
+        const dx = x - cx;
+        const dy = y - cy;
+        const u = (dx * c + dy * s) / rx;
+        const v = (-dx * s + dy * c) / ry;
+        const r2 = u * u + v * v;
+        if (r2 > 1 || only && !only(x, y)) continue;
+        const nx = u * c - v * s;
+        const ny = u * s + v * c;
+        const away = nx * LIGHT[0] + ny * LIGHT[1] < 0;
+        if (rim && (away || rimAll) && r2 > rimAt * rimAt) this.set(x, y, rim);
+        else this.set(x, y, ramp[shade(nx, ny, ramp.length, bias)]);
+      }
+    }
+    return this;
+  }
+  /**
+   * A filled polygon, shaded top to bottom across its own height (or one character).
+   * @param {[number, number][]} points
+   * @param {string} ramp light to dark; one character paints it flat
+   */
+  polygon(points, ramp) {
+    const ys = points.map(([, y]) => y);
+    const top = Math.min(...ys);
+    const bottom = Math.max(...ys);
+    for (let y = Math.floor(top); y <= Math.ceil(bottom); y++) {
+      const cy = y;
+      const xs = [];
+      for (let i = 0; i < points.length; i++) {
+        const [x0, y0] = points[i];
+        const [x1, y1] = points[(i + 1) % points.length];
+        if (y0 <= cy && y1 > cy || y1 <= cy && y0 > cy) xs.push(x0 + (cy - y0) / (y1 - y0) * (x1 - x0));
+      }
+      xs.sort((a, b) => a - b);
+      const t = bottom > top ? (cy - top) / (bottom - top) : 0;
+      const ch = ramp[Math.min(ramp.length - 1, Math.floor(t * ramp.length))];
+      for (let i = 0; i + 1 < xs.length; i += 2) {
+        for (let x = Math.round(xs[i]); x <= Math.round(xs[i + 1]); x++) this.set(x, y, ch);
+      }
+    }
+    return this;
+  }
+  /**
+   * A one-pixel line.
+   * @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {string} ch
+   */
+  line(x0, y0, x1, y1, ch) {
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+    for (let i = 0; i <= n; i++) this.set(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, ch);
+    return this;
+  }
+  /**
+   * Outlines the drawing: every empty pixel next to a painted one (up, down, left or right) gets `ch`.
+   * @param {string} ch
+   */
+  outline(ch) {
+    const edge = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.px[y][x] !== ".") continue;
+        const near = [this.get(x - 1, y), this.get(x + 1, y), this.get(x, y - 1), this.get(x, y + 1)];
+        if (near.some((n) => n !== "." && n !== ch)) edge.push([x, y]);
+      }
+    }
+    for (const [x, y] of edge) this.px[y][x] = ch;
+    return this;
+  }
+  /** @returns {Grid} a copy to paint over */
+  copy() {
+    const g = new _Grid(this.width, this.height);
+    g.px = this.px.map((row) => [...row]);
+    return g;
+  }
+  /** @returns {string[]} the rows, for Sprite.fromPixels */
+  rows() {
+    return this.px.map((row) => row.join(""));
+  }
+};
+__name(_Grid, "Grid");
+var Grid = _Grid;
+
+// src/art/chicken64.js
+var palette2 = {
+  ".": null,
+  k: "#1e1418",
+  // outline
+  K: "#6b5a62",
+  // lines inside the drawing
+  W: "#ffffff",
+  // feathers, light to dark
+  w: "#f2eee6",
+  v: "#dcd5c9",
+  s: "#bbb1a3",
+  d: "#8d8376",
+  R: "#ff6e5c",
+  // comb and wattle, light to dark
+  r: "#e2323e",
+  q: "#a3182a",
+  Q: "#600c1a",
+  Y: "#ffe37c",
+  // beak and feet, light to dark
+  y: "#f8b834",
+  o: "#d3801e",
+  O: "#8f4a0e",
+  m: "#5e0e1c"
+  // inside the beak
+};
+var SIZE = 48;
+var FEATHERS = "Wwvsd";
+var RED = "Rrq Q".replace(" ", "");
+var GOLD = "YyoO";
+function hen(wing, panic) {
+  const g = new Grid(SIZE, SIZE);
+  g.ellipse(11, 16, 6, 2.6, FEATHERS, { angle: -1.15, rim: "K" });
+  g.ellipse(9, 20, 7, 3, FEATHERS, { angle: -0.85, rim: "K" });
+  g.ellipse(8, 24, 7, 3, FEATHERS, { angle: -0.5, rim: "K" });
+  for (const x of [19, 25]) {
+    g.polygon(
+      [
+        [x - 1, 39],
+        [x + 1, 39],
+        [x + 1, 44],
+        [x - 1, 44]
+      ],
+      GOLD.slice(1)
+    );
+    g.polygon(
+      [
+        [x - 3, 44],
+        [x + 3, 44],
+        [x + 4, 46],
+        [x - 4, 46]
+      ],
+      GOLD
+    );
+  }
+  g.ellipse(21, 30, 14, 11, FEATHERS);
+  g.ellipse(29, 27, 8, 9, FEATHERS, { bias: 0.05 });
+  g.ellipse(32, 19, 6, 7, FEATHERS, { bias: 0.1 });
+  g.ellipse(35, 13, 6.5, 6, FEATHERS, { bias: 0.15 });
+  const wings = {
+    up: { cx: 18, cy: 16, rx: 9.5, ry: 4, angle: -1.25 },
+    mid: { cx: 19, cy: 30, rx: 9.5, ry: 5, angle: 0.15 },
+    down: { cx: 20, cy: 37, rx: 9.5, ry: 4, angle: 0.65 }
+  };
+  const wg = wings[wing];
+  g.ellipse(wg.cx, wg.cy, wg.rx, wg.ry, "wvsd", { angle: wg.angle, rim: "K", rimAt: 0.86, rimAll: true });
+  const c = Math.cos(wg.angle);
+  const s = Math.sin(wg.angle);
+  for (const across of [-0.3, 0.35]) {
+    const bx = wg.cx - s * wg.ry * across;
+    const by = wg.cy + c * wg.ry * across;
+    g.line(bx - c * wg.rx * 0.15, by - s * wg.rx * 0.15, bx - c * wg.rx * 0.8, by - s * wg.rx * 0.8, "K");
+  }
+  g.ellipse(34, 8, 4, 1.6, RED);
+  g.ellipse(31, 6.5, 2.2, 2.2, RED);
+  g.ellipse(34, 5.3, 2.6, 2.6, RED);
+  g.ellipse(37.2, 6.5, 2.2, 2.2, RED);
+  g.ellipse(39.5, 19.5, 1.8, 2.7, RED);
+  if (panic) {
+    g.polygon(
+      [
+        [40, 10.5],
+        [45.5, 11.5],
+        [40, 13]
+      ],
+      GOLD.slice(0, 2)
+    );
+    g.polygon(
+      [
+        [40, 14],
+        [44.5, 16.5],
+        [40, 16.5]
+      ],
+      GOLD.slice(1, 3)
+    );
+    g.polygon(
+      [
+        [40, 13],
+        [43, 13],
+        [43, 14],
+        [40, 14]
+      ],
+      "m"
+    );
+    g.ellipse(36.5, 11.5, 2.3, 2.3, "W");
+    g.set(37, 12, "k");
+    for (const [x, y] of [
+      [34, 10],
+      [34, 13],
+      [39, 10],
+      [39, 13],
+      [36, 9],
+      [37, 9],
+      [36, 14],
+      [37, 14]
+    ]) {
+      g.set(x, y, "K");
+    }
+    for (const [x0, y0, x1, y1] of [
+      [27, 18, 25, 15],
+      [12, 31, 9, 33],
+      [30, 39, 32, 42],
+      [17, 41, 15, 43]
+    ]) {
+      g.line(x0, y0, x1, y1, "v");
+    }
+  } else {
+    g.polygon(
+      [
+        [40, 11],
+        [45.5, 13.5],
+        [40, 15.5]
+      ],
+      GOLD
+    );
+    g.line(41, 13.5, 44, 13.5, "O");
+    g.set(36, 11, "k");
+    g.set(37, 11, "k");
+    g.set(36, 12, "k");
+    g.set(37, 12, "k");
+    g.set(36, 11, "W");
+  }
+  return g.outline("k").rows();
+}
+__name(hen, "hen");
+var flapFrames2 = [hen("up", false), hen("mid", false), hen("down", false), hen("mid", false)];
+var panicFrames2 = [hen("up", true), hen("down", true)];
+function feather(angle) {
+  const g = new Grid(12, 12);
+  g.ellipse(6, 6, 5, 1.8, FEATHERS, { angle, rim: "K" });
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  g.line(6 - c * 5, 6 - s * 5, 6 + c * 4, 6 + s * 4, "s");
+  return g.outline("k").rows();
+}
+__name(feather, "feather");
+var featherFrames = [feather(-0.75), feather(0), feather(0.75)];
+
 // src/projectiles/chicken.js
 var FLAP_FPS = 12;
 var PANIC_FPS = 20;
@@ -1829,13 +2131,14 @@ var _Chicken = class _Chicken extends Projectile {
     const r = init.random;
     this.layer = /** @type {const} */
     "sprite";
+    this.art = pickTheme(_Chicken.themes, this.theme);
     this.scale = init.scale ?? d.scale;
     this.speed = init.speed ?? d.speed;
     this.panicSteps = init.panicSteps ?? d.panicSteps;
     this.featherCount = init.feathers ?? d.feathers;
     const flight = init.flight ?? d.flight;
     this.flight = flight === "random" ? r.next() < 0.5 ? "rise" : "cross" : flight;
-    const half = _Chicken.sprite.frameWidth * this.scale / 2;
+    const half = this.art.sprite.frameWidth * this.art.pixelSize * this.scale / 2;
     if (this.flight === "cross") {
       const fromLeft = r.next() < 0.5;
       const startY = init.target.y + r.range(-40, 40);
@@ -1888,18 +2191,25 @@ var _Chicken = class _Chicken extends Projectile {
     engine.addParticles(
       Array.from(
         { length: this.featherCount },
-        () => new Feather({ x: this.x, y: this.y, scale: Math.max(1, this.scale - 1), random: this.random })
+        () => new Feather({
+          x: this.x,
+          y: this.y,
+          scale: Math.max(1, this.scale - 1),
+          random: this.random,
+          sprite: this.art.feather,
+          pixelSize: this.art.feather ? this.art.pixelSize : 1
+        })
       )
     );
   }
-  /** Index into `Chicken.sprite` for the current step. */
+  /** Index into its theme's sprite for the current step. */
   get frame() {
     if (this.panicking) return 4 + Math.floor(this.panicAge * PANIC_FPS / 60) % 2;
     return Math.floor(this.age * FLAP_FPS / 60) % 4;
   }
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    _Chicken.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, flip: this.flip, flash: this.flash });
+    this.art.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.art.pixelSize, flip: this.flip, flash: this.flash });
   }
 };
 __name(_Chicken, "Chicken");
@@ -1916,8 +2226,19 @@ __publicField(
     feathers: 16
   }
 );
-/** Frames 0-3 flap (up, mid, down, mid), 4-5 panic. Replace with your own art in the same layout. */
-__publicField(_Chicken, "sprite", Sprite.fromPixels([...flapFrames, ...panicFrames], palette));
+/**
+ * Art per theme. Frames 0-3 flap (up, mid, down, mid), 4-5 panic, facing right. Replace a theme's
+ * `sprite` with your own art in the same layout, or add a theme under a new name.
+ * @type {Record<string, ChickenArt>}
+ */
+__publicField(_Chicken, "themes", {
+  "64bit": {
+    sprite: Sprite.fromPixels([...flapFrames2, ...panicFrames2], palette2),
+    pixelSize: 1 / 3,
+    feather: Sprite.fromPixels(featherFrames, palette2)
+  },
+  retro: { sprite: Sprite.fromPixels([...flapFrames, ...panicFrames], palette), pixelSize: 1 }
+});
 var Chicken = _Chicken;
 
 // src/art/font.js
@@ -1948,7 +2269,7 @@ function textWidth(text) {
 __name(textWidth, "textWidth");
 
 // src/art/jug.js
-var palette2 = {
+var palette3 = {
   ".": null,
   k: "#2b1e24",
   // outline
@@ -2071,10 +2392,10 @@ var shardFrames = [
 ];
 
 // src/shard.js
-var jugShards = Sprite.fromPixels(shardFrames, palette2);
+var jugShards = Sprite.fromPixels(shardFrames, palette3);
 var _Shard = class _Shard {
   /** @param {ShardInit} init */
-  constructor({ x, y, scale, random: r, sprite: sprite2 = jugShards }) {
+  constructor({ x, y, scale, random: r, sprite = jugShards, pixelSize = 1 }) {
     const angle = r.range(0, Math.PI * 2);
     const speed = r.range(2, 7);
     this.x = x;
@@ -2082,8 +2403,9 @@ var _Shard = class _Shard {
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed - 2.5;
     this.scale = scale;
-    this.sprite = sprite2;
-    this.frame = r.int(0, sprite2.frames - 1);
+    this.sprite = sprite;
+    this.pixelSize = pixelSize;
+    this.frame = r.int(0, sprite.frames - 1);
     this.rotation = r.range(0, Math.PI * 2);
     this.spin = r.range(-0.3, 0.3);
     this.life = r.int(70, 110);
@@ -2105,7 +2427,7 @@ var _Shard = class _Shard {
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
     const alpha = Math.min(1, (this.life - this.age) / _Shard.FADE_STEPS);
-    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, alpha, rotation: this.rotation });
+    this.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.pixelSize, alpha, rotation: this.rotation });
   }
 };
 __name(_Shard, "Shard");
@@ -2124,7 +2446,9 @@ var _Jug = class _Jug extends Projectile {
     const scale = init.scale ?? d.scale;
     const r = init.random;
     const x = init.size.width * inRange(r, init.launchPoint ?? d.launchPoint) / 100;
-    super({ ...init, x, y: init.y + _Jug.sprite.frameHeight * scale / 2 });
+    const art = pickTheme(_Jug.themes, init.theme ?? init.options.theme);
+    super({ ...init, x, y: init.y + art.sprite.frameHeight * art.pixelSize * scale / 2 });
+    this.art = art;
     this.layer = /** @type {const} */
     "sprite";
     this.scale = scale;
@@ -2169,16 +2493,19 @@ var _Jug = class _Jug extends Projectile {
   explode(engine) {
     engine.burst(this.x, this.y, this.hue, this.burst, this.burstSize);
     engine.addParticles(
-      Array.from({ length: this.shardCount }, () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random }))
+      Array.from(
+        { length: this.shardCount },
+        () => new Shard({ x: this.x, y: this.y, scale: this.scale, random: this.random, sprite: this.art.shards, pixelSize: this.art.pixelSize })
+      )
     );
   }
-  /** Index into `Jug.sprite` for the current step. */
+  /** Index into its theme's sprite for the current step. */
   get frame() {
     return Math.floor(this.age * FLAME_FPS / 60) % 3;
   }
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    _Jug.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, rotation: this.rotation });
+    this.art.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.art.pixelSize, rotation: this.rotation });
   }
 };
 __name(_Jug, "Jug");
@@ -2195,8 +2522,14 @@ __publicField(
     launchPoint: { min: 10, max: 90 }
   }
 );
-/** Frames 0-2: the wick flame flickering. Replace with your own art in the same layout. */
-__publicField(_Jug, "sprite", Sprite.fromPixels(frames, palette2));
+/**
+ * Art per theme (only retro so far, so every theme falls back to it). Frames 0-2: the wick
+ * flame flickering, upright, wick at the top. `shards`: the stoneware pieces.
+ * @type {Record<string, import('../themes.js').ThemeArt & {shards: Sprite}>}
+ */
+__publicField(_Jug, "themes", {
+  retro: { sprite: Sprite.fromPixels(frames, palette3), pixelSize: 1, shards: jugShards }
+});
 var Jug = _Jug;
 
 // src/milk.js
@@ -2255,7 +2588,7 @@ __publicField(_Milk, "FADE_STEPS", 20);
 var Milk = _Milk;
 
 // src/art/cow.js
-var palette3 = {
+var palette4 = {
   ".": null,
   k: "#2b1e24",
   // outline and spots
@@ -2380,7 +2713,6 @@ var steakFrames = [steak, steak.map((row) => [...row].reverse().join(""))];
 // src/projectiles/cow.js
 var LEG_FPS = 10;
 var MOO_FPS = 12;
-var steakSprite = Sprite.fromPixels(steakFrames, palette3);
 var _Cow = class _Cow extends Projectile {
   /** @param {import('../projectile.js').ProjectileInit & CowOptions} init */
   constructor(init) {
@@ -2391,6 +2723,7 @@ var _Cow = class _Cow extends Projectile {
     super({ ...init, x });
     this.layer = /** @type {const} */
     "sprite";
+    this.art = pickTheme(_Cow.themes, this.theme);
     this.scale = scale;
     this.speed = init.speed ?? d.speed;
     this.hoverSteps = init.hoverSteps ?? d.hoverSteps;
@@ -2398,7 +2731,7 @@ var _Cow = class _Cow extends Projectile {
     this.steakCount = init.steaks ?? d.steaks;
     this.milkCount = init.milk ?? d.milk;
     this.startX = x;
-    this.startY = init.y + _Cow.sprite.frameHeight * scale / 2;
+    this.startY = init.y + this.art.sprite.frameHeight * this.art.pixelSize * scale / 2;
     this.moveTo(this.startX, this.startY);
     const distance = Math.hypot(init.target.x - this.startX, init.target.y - this.startY);
     this.floatSteps = Math.max(30, Math.round(distance / this.speed));
@@ -2447,11 +2780,11 @@ var _Cow = class _Cow extends Projectile {
     engine.burst(this.x, this.y, this.hue, this.burst);
     const { x, y, random } = this;
     engine.addParticles([
-      ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: steakSprite })),
+      ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: this.art.steaks, pixelSize: this.art.pixelSize })),
       ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random }))
     ]);
   }
-  /** Index into `Cow.sprite` for the current step. */
+  /** Index into its theme's sprite for the current step. */
   get frame() {
     if (this.mooing) return 4 + Math.floor(this.phaseAge * MOO_FPS / 60) % 2;
     return Math.floor(this.age * LEG_FPS / 60) % 4;
@@ -2462,12 +2795,13 @@ var _Cow = class _Cow extends Projectile {
    * @returns {{x: number, y: number, frame: number, scale: number}} its centre, frame and scale
    */
   bubblePlace() {
-    const s = this.scale;
+    const s = this.scale * this.art.pixelSize;
     const pop = Math.min(1, 0.6 + 0.1 * this.phaseAge);
-    const headX = this.x + (this.flip ? -1 : 1) * (HEAD.x + 0.5 - _Cow.sprite.frameWidth / 2) * s;
-    const headY = this.y + (HEAD.y + 0.5 - _Cow.sprite.frameHeight / 2) * s;
-    const w = BUBBLE_WIDTH * s;
-    const h = BUBBLE_HEIGHT * s;
+    const { sprite, head, bubble: bubble2 } = this.art;
+    const headX = this.x + (this.flip ? -1 : 1) * (head.x + 0.5 - sprite.frameWidth / 2) * s;
+    const headY = this.y + (head.y + 0.5 - sprite.frameHeight / 2) * s;
+    const w = bubble2.frameWidth * s;
+    const h = bubble2.frameHeight * s;
     const reach = w / 2 - s;
     let right = !this.flip;
     if (right && headX + reach + w / 2 > this.size.width) right = false;
@@ -2478,10 +2812,10 @@ var _Cow = class _Cow extends Projectile {
   }
   /** @param {CanvasRenderingContext2D} ctx */
   draw(ctx) {
-    _Cow.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale, flip: this.flip });
+    this.art.sprite.draw(ctx, this.frame, this.x, this.y, { scale: this.scale * this.art.pixelSize, flip: this.flip });
     if (this.mooing) {
       const b = this.bubblePlace();
-      _Cow.bubble.draw(ctx, b.frame, b.x, b.y, { scale: b.scale });
+      this.art.bubble.draw(ctx, b.frame, b.x, b.y, { scale: b.scale });
     }
   }
 };
@@ -2501,10 +2835,22 @@ __publicField(
     launchPoint: { min: 10, max: 90 }
   }
 );
-/** Frames 0-3 legs kicking, 4-5 excited (mouth open). Replace with your own art in the same layout. */
-__publicField(_Cow, "sprite", Sprite.fromPixels([...floatFrames, ...mooFrames], palette3));
-/** Frame 0 with its tail on the left (for a bubble right of the head), 1 on the right. */
-__publicField(_Cow, "bubble", Sprite.fromPixels(bubbleFrames, palette3));
+/**
+ * Art per theme (only retro so far, so every theme falls back to it). Frames 0-3 legs kicking,
+ * 4-5 excited (mouth open), facing right. `bubble`: frame 0 with its tail on the left (for a
+ * bubble right of the head), 1 on the right. `steaks`: the T-bones. `head`: where the head is,
+ * in sprite pixels, for placing the bubble.
+ * @type {Record<string, import('../themes.js').ThemeArt & {bubble: Sprite, steaks: Sprite, head: {x: number, y: number}}>}
+ */
+__publicField(_Cow, "themes", {
+  retro: {
+    sprite: Sprite.fromPixels([...floatFrames, ...mooFrames], palette4),
+    pixelSize: 1,
+    bubble: Sprite.fromPixels(bubbleFrames, palette4),
+    steaks: Sprite.fromPixels(steakFrames, palette4),
+    head: HEAD
+  }
+});
 var Cow = _Cow;
 
 // src/pointer.js
@@ -2809,11 +3155,14 @@ var _Xploders = class _Xploders {
   }
 };
 __name(_Xploders, "Xploders");
+/** The built-in art themes, the default ('64bit') first. A character's `themes` may add more. */
+__publicField(_Xploders, "themes", THEMES);
 var Xploders = _Xploders;
 var index_default = Xploders;
 export {
   Chicken,
   Cow,
+  DEFAULT_THEME,
   Feather,
   Flame,
   Glow,
@@ -2830,6 +3179,7 @@ export {
   bursts,
   index_default as default,
   defaultOptions,
-  parsePixels
+  parsePixels,
+  pickTheme
 };
 //# sourceMappingURL=xploders.mjs.map
