@@ -4,6 +4,7 @@
  * @property {number} y
  * @property {number} scale CSS px per sprite pixel of the cow it came from
  * @property {import('./random.js').Random} random
+ * @property {boolean} [glint] a shine and soft shade, for the detailed (64-bit) theme
  */
 
 /**
@@ -17,7 +18,7 @@ export class Milk {
   static FADE_STEPS = 20
 
   /** @param {MilkInit} init */
-  constructor({ x, y, scale, random: r }) {
+  constructor({ x, y, scale, random: r, glint = false }) {
     const angle = r.range(0, Math.PI * 2)
     const speed = r.range(2, 8)
     this.x = x
@@ -25,6 +26,7 @@ export class Milk {
     this.vx = Math.cos(angle) * speed
     this.vy = Math.sin(angle) * speed - 2 // thrown upward a little
     this.radius = r.range(0.6, 1.3) * scale
+    this.glint = glint
     this.life = r.int(40, 70)
     this.age = 0
     this.dead = false
@@ -65,6 +67,17 @@ export class Milk {
     ctx.lineWidth = 1
     ctx.strokeStyle = 'rgba(120, 140, 170, 0.6)'
     ctx.stroke()
+    if (this.glint) {
+      // a soft shade along its lower side, and a shine at its upper front
+      ctx.beginPath()
+      ctx.ellipse(-this.radius * stretch * 0.15, this.radius * 0.35, this.radius * stretch * 0.7, this.radius * 0.45, 0, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(190, 205, 230, 0.55)'
+      ctx.fill()
+      ctx.beginPath()
+      ctx.ellipse(this.radius * stretch * 0.35, -this.radius * 0.4, this.radius * 0.35, this.radius * 0.25, 0, 0, Math.PI * 2)
+      ctx.fillStyle = '#ffffff'
+      ctx.fill()
+    }
     ctx.restore()
   }
 }

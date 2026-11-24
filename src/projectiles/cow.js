@@ -5,6 +5,7 @@ import { Milk } from '../milk.js'
 import { inRange } from '../random.js'
 import { pickTheme } from '../themes.js'
 import { palette, floatFrames, mooFrames, bubbleFrames, steakFrames, HEAD } from '../art/cow.js'
+import * as cow64 from '../art/cow64.js'
 
 /**
  * @typedef {object} CowOptions
@@ -38,13 +39,21 @@ export class Cow extends Projectile {
   })
 
   /**
-   * Art per theme (only retro so far, so every theme falls back to it). Frames 0-3 legs kicking,
-   * 4-5 excited (mouth open), facing right. `bubble`: frame 0 with its tail on the left (for a
-   * bubble right of the head), 1 on the right. `steaks`: the T-bones. `head`: where the head is,
-   * in sprite pixels, for placing the bubble.
-   * @type {Record<string, import('../themes.js').ThemeArt & {bubble: Sprite, steaks: Sprite, head: {x: number, y: number}}>}
+   * Art per theme. Frames 0-3 legs kicking, 4-5 excited (mouth open), facing right. `bubble`:
+   * frame 0 with its tail on the left (for a bubble right of the head), 1 on the right. `steaks`:
+   * the T-bones. `head`: where the head is, in sprite pixels, for placing the bubble. `milkGlint`:
+   * shiny milk. Replace a theme's art, or add a theme under a new name.
+   * @type {Record<string, import('../themes.js').ThemeArt & {bubble: Sprite, steaks: Sprite, head: {x: number, y: number}, milkGlint?: boolean}>}
    */
   static themes = {
+    '64bit': {
+      sprite: Sprite.fromPixels([...cow64.floatFrames, ...cow64.mooFrames], cow64.palette),
+      pixelSize: 1 / 3,
+      bubble: Sprite.fromPixels(cow64.bubbleFrames, cow64.palette),
+      steaks: Sprite.fromPixels(cow64.steakFrames, cow64.palette),
+      head: cow64.HEAD,
+      milkGlint: true,
+    },
     retro: {
       sprite: Sprite.fromPixels([...floatFrames, ...mooFrames], palette),
       pixelSize: 1,
@@ -62,7 +71,7 @@ export class Cow extends Projectile {
     const x = (init.size.width * inRange(r, init.launchPoint ?? d.launchPoint)) / 100
     super({ ...init, x })
     this.layer = /** @type {const} */ ('sprite')
-    this.art = pickTheme(Cow.themes, this.theme)
+    this.art = pickTheme(new.target.themes, this.theme) // a subclass's own themes, if it has them
     this.scale = scale
     this.speed = init.speed ?? d.speed
     this.hoverSteps = init.hoverSteps ?? d.hoverSteps
@@ -129,7 +138,7 @@ export class Cow extends Projectile {
     const { x, y, random } = this
     engine.addParticles([
       ...Array.from({ length: this.steakCount }, () => new Shard({ x, y, scale: Math.max(1, this.scale - 1), random, sprite: this.art.steaks, pixelSize: this.art.pixelSize })),
-      ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random })),
+      ...Array.from({ length: this.milkCount }, () => new Milk({ x, y, scale: this.scale, random, glint: this.art.milkGlint })),
     ])
   }
 

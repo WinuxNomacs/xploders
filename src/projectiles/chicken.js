@@ -56,7 +56,7 @@ export class Chicken extends Projectile {
     const d = Chicken.defaults
     const r = init.random
     this.layer = /** @type {const} */ ('sprite')
-    this.art = pickTheme(Chicken.themes, this.theme)
+    this.art = pickTheme(new.target.themes, this.theme) // a subclass's own themes, if it has them
     this.scale = init.scale ?? d.scale
     this.speed = init.speed ?? d.speed
     this.panicSteps = init.panicSteps ?? d.panicSteps
