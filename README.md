@@ -4,6 +4,8 @@ Fireworks, and things that explode into fireworks, on a transparent HTML canvas.
 dependencies. Options and methods follow [fireworks-js](https://fireworks.js.org/), so a fireworks-js config works
 here.
 
+**Live demo: <https://winuxnomacs.com/xploders/>**
+
 > Early development; see [upcoming-changes.md](upcoming-changes.md) for what's next.
 
 ## Install
@@ -195,7 +197,7 @@ own server on port 8123; needs `npm run build:site` first).
 
 ```sh
 npm run publish:site        # builds site/ and commits it to the gh-pages branch (does not push)
-git push origin gh-pages    # publishes it, once GitHub Pages deploys from gh-pages
+git push origin gh-pages    # publishes it to https://winuxnomacs.com/xploders/
 ```
 
 ## Credits
